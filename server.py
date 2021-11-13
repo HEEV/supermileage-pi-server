@@ -1,20 +1,36 @@
 from reader import Reader
-import sqlite3
-from sqlite3 import Error
 import os
+import mysql.connector
+from mysql.connector import errorcode
 
 # Set up a reader to get data
 reader = Reader(os.environ.get('PICO_DEV'))
 
-# Connect to the database
-def create_connection(path):
-    connection = None
-    try:
-        connection = sqlite3.connect(path)
-        print("Connection to SQLite DB successful")
-    except Error as e:
-        print(e)
-    return connection
+try:
+    # Connect to the dataabase
+    cnx = mysql.connector.connect(
+        user='server', password='password', host='127.0.0.1', database='super_mileage_test')
+except mysql.connector.Error as err:
 
-# Open the connnection
-connection = create_connection("data/test.db")
+    # Handle errors
+    if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+        print("Something is wrong with your user name or password")
+    elif err.errno == errorcode.ER_BAD_DB_ERROR:
+        print("Database does not exist")
+    else:
+        print(err)
+else:
+
+    # Create a query
+    cursor = cnx.cursor()
+    query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main)")
+    
+    # Execute the query
+    cursor.execute(query)
+
+    for (time, number) in cursor:
+      print(f"{time}: {number}")
+
+    # Close the connection
+    cursor.close()
+    cnx.close()
