@@ -133,3 +133,6 @@ dmypy.json
 
 # Mac finder config files
 .DS_STORE
+
+# Database files
+data/
