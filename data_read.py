@@ -21,16 +21,13 @@ except mysql.connector.Error as err:
     else:
         print(err)
 else:
+    while True:
+        # Create a query
+        cursor = cnx.cursor()
+        query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main);")
 
-    # Read all data
-    cursor = cnx.cursor()
-    while (True):
-        data = reader.readline()
-        if data == "":
-            continue
-
-        # Insert data
-        query = (f"INSERT INTO main (time, number) VALUES ({round(time.time() * 1000)}, {data})")
+        # Execute the query
         cursor.execute(query)
-    cursor.close()
-    cnx.close()
+
+        for (time, number) in cursor:
+            print(f"{time}: {number}")
