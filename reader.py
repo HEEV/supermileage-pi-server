@@ -10,5 +10,6 @@ class Reader:
         self.ser = serial.Serial(file, 9600)
 
     # Read a line from the serial
-    def readline(self) -> str:
-        return self.ser.readline().decode('ascii').strip()
+    def readline(self) -> int:
+        binary = self.ser.readline()
+        return int.from_bytes(binary, "big")
