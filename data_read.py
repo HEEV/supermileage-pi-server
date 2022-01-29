@@ -31,3 +31,4 @@ else:
 
         for (time, number) in cursor:
             print(f"{time}: {number}")
+        time.sleep(.2)
