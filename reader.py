@@ -12,4 +12,5 @@ class Reader:
     # Read a line from the serial
     def readline(self) -> int:
         binary = self.ser.readline()
+        print(binary)
         return int.from_bytes(binary, "big")
