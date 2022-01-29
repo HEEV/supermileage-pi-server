@@ -24,17 +24,17 @@ else:
     # Create a query
     cursor = cnx.cursor()
     query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main);")
-    
+
     # Execute the query
     cursor.execute(query)
 
     for (time, number) in cursor:
-      print(f"{time}: {number}")
+        print(f"{time}: {number}")
 
     # Close the connection
     cursor.close()
     cnx.close()
 
-finally:
-  while (True):
-    print(reader.readline())
+    # Read all data
+    while (True):
+        print(reader.readline())
