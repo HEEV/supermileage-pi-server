@@ -23,7 +23,7 @@ else:
 
     # Create a query
     cursor = cnx.cursor()
-    query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main)")
+    query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main);")
     
     # Execute the query
     cursor.execute(query)
@@ -34,3 +34,7 @@ else:
     # Close the connection
     cursor.close()
     cnx.close()
+
+finally:
+  while (True):
+    print(reader.readline())
