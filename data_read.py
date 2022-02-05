@@ -22,6 +22,7 @@ except mysql.connector.Error as err:
         print(err)
 else:
     while True:
+      
         # Create a query
         cursor = cnx.cursor()
         query = ("SELECT * FROM main WHERE time=(SELECT MAX(time) FROM main);")
@@ -29,6 +30,7 @@ else:
         # Execute the query
         cursor.execute(query)
 
-        for (time, number) in cursor:
-            print(f"{time}: {number}")
+        for (t, number) in cursor:
+            print(f"{t}: {number}")
+        cnx.commit()
         time.sleep(.2)

@@ -32,5 +32,6 @@ else:
         # Insert data
         query = (f"INSERT INTO main (time, number) VALUES ({round(time.time() * 1000)}, {data})")
         cursor.execute(query)
+        cnx.commit()
     cursor.close()
     cnx.close()
