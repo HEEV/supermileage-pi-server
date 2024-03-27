@@ -72,7 +72,7 @@ def parse_line(line: str) -> CarData:
 
 
 async def main():
-    port = '/dev/tty.usbserial-14230'
+    port = '/dev/tty.usbserial-14140'
     baud_rate = 9600
     ser = serial.Serial(port, baud_rate, timeout=0.025)
 
