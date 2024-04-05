@@ -15,8 +15,8 @@ sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 sio.attach(app)
 
-sio_client = socketio.SimpleClient()
-sio_client.connect('http://judas.arkinsolomon.net')
+sio_client = socketio.SimpleClient(ssl_verify=False)
+sio_client.connect('https://judas.arkinsolomon.net')
 sio_client.emit('request_write_permission', 'squid')
 
 distance_traveled = 0
@@ -55,6 +55,10 @@ class CarData:
 
 def parse_line(line: str) -> CarData:
     global last_update, distance_traveled
+
+    if distance_traveled > 100000000:
+        distance_traveled = 0
+
     output = line.split(',')
     utc_dt_aware = datetime.datetime.now(datetime.timezone.utc)
     timestamp = math.floor(utc_dt_aware.timestamp() * 1000)
@@ -72,7 +76,7 @@ def parse_line(line: str) -> CarData:
 
 
 async def main():
-    port = '/dev/tty.usbserial-14140'
+    port = '/dev/tty.usbserial-14130'
     baud_rate = 9600
     ser = serial.Serial(port, baud_rate, timeout=0.025)
 
@@ -110,9 +114,9 @@ async def main():
             print(data)
             await sio.emit('new_data', data.to_map())
             sio_client.emit('write_data', data.to_map())
-            await asyncio.sleep(.25)
-        except:
-            print(f'Exception while parsing/sending data: {last_line}')
+            await asyncio.sleep(.05)
+        except Exception as e:
+            print(f'Exception while parsing/sending data: {last_line}, {e}')
             pass
 
 
