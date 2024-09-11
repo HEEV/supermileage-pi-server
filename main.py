@@ -11,29 +11,34 @@ import aiohttp.web_runner
 import nest_asyncio
 
 nest_asyncio.apply()
+
+# initialize the local python server
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 sio.attach(app)
 
+# initialize server object for remote connection
+# TODO: update connect url for new server
 sio_client = socketio.SimpleClient(ssl_verify=False)
 sio_client.connect('https://judas.arkinsolomon.net')
+# Get permission from the remote server to transmit
 sio_client.emit('request_write_permission', 'squid')
 
 distance_traveled = 0
 last_update = 0
 
-
+# reset base variables when new race is requested
 def new_race_created():
     global distance_traveled, last_update
     distance_traveled = 0
     last_update = 0
 
-
+# Send request for a new race to remote server, not used?
 @sio.event
 async def request_new_race(sid):
     sio_client.emit('request_new_race')
 
-
+# The data object format for sending arduino data to display servers
 @dataclass
 class CarData:
     time: int
@@ -52,7 +57,7 @@ class CarData:
             "tilt": 0
         }
 
-
+# parse the serial data from the arduino into CarData object
 def parse_line(line: str) -> CarData:
     global last_update, distance_traveled
 
@@ -76,21 +81,29 @@ def parse_line(line: str) -> CarData:
 
 
 async def main():
+    # arduino serial connection initialization
     port = '/dev/tty.usbserial-14130'
     baud_rate = 9600
     ser = serial.Serial(port, baud_rate, timeout=0.025)
 
+
+    # Spinning up the local python server
     runner = aiohttp.web.AppRunner(app)
 
     await runner.setup()
     await aiohttp.web.TCPSite(runner, '0.0.0.0', 8080).start()
 
+    # Main server loop
     while True:
 
+        # check for events from the remote server
         try:
             event = sio_client.receive(timeout=1)
             if event is not None:
                 event_name = event[0]
+                
+                # If we got write permission, get a new race save. 
+                # If the race is successfully created, set up to deliver data
                 if event_name == 'permission_granted':
                     sio_client.emit('request_new_race')
                 elif event_name == 'new_race_created':
@@ -100,6 +113,7 @@ async def main():
         except:
             pass
 
+        # read serial data from arduino
         try:
             last_line = ser.readline().decode('utf-8')
             next_line = ser.readline().decode('utf-8')
@@ -109,10 +123,13 @@ async def main():
         except:
             continue
 
+        # parse the arduino data, send data to local (sio) and remote (sio_client)
         try:
             data = parse_line(last_line)
             print(data)
+            # Broadcast to connected clients
             await sio.emit('new_data', data.to_map())
+            # Broadcast to remote server
             sio_client.emit('write_data', data.to_map())
             await asyncio.sleep(.05)
         except Exception as e:
