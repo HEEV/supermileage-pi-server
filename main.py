@@ -6,6 +6,7 @@ import serial
 import socketio
 from aiohttp import web
 import aiohttp.web_runner
+from csv import writer
 
 # async in python is dumb idek what this does but stackoverflow said to do it and now it works
 import nest_asyncio
@@ -19,10 +20,16 @@ sio.attach(app)
 
 # initialize server object for remote connection
 # TODO: update connect url for new server
-sio_client = socketio.SimpleClient(ssl_verify=False)
-sio_client.connect('https://judas.arkinsolomon.net')
+#sio_client = socketio.SimpleClient(ssl_verify=False)
+#sio_client.connect('https://judas.arkinsolomon.net')
 # Get permission from the remote server to transmit
-sio_client.emit('request_write_permission', 'squid')
+#sio_client.emit('request_write_permission', 'squid')
+
+#Create CSV for this session
+data_file_name = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_car_data.csv')
+with open(data_file_name, 'w') as file:
+    csv_writer = writer(file)
+    csv_writer.writerow(["time", "voltage", "speed", "distance_traveled"])
 
 distance_traveled = 0
 last_update = 0
@@ -36,7 +43,8 @@ def new_race_created():
 # Send request for a new race to remote server, not used?
 @sio.event
 async def request_new_race(sid):
-    sio_client.emit('request_new_race')
+    print("requesting new race...")
+    #sio_client.emit('request_new_race')
 
 # The data object format for sending arduino data to display servers
 @dataclass
@@ -82,7 +90,7 @@ def parse_line(line: str) -> CarData:
 
 async def main():
     # arduino serial connection initialization
-    port = '/dev/tty.usbserial-14130'
+    port = '/dev/tty.usbserial-14130' #COM6
     baud_rate = 9600
     ser = serial.Serial(port, baud_rate, timeout=0.025)
 
@@ -98,14 +106,14 @@ async def main():
 
         # check for events from the remote server
         try:
-            event = sio_client.receive(timeout=1)
+            event = None# sio_client.receive(timeout=1)
             if event is not None:
                 event_name = event[0]
                 
                 # If we got write permission, get a new race save. 
                 # If the race is successfully created, set up to deliver data
                 if event_name == 'permission_granted':
-                    sio_client.emit('request_new_race')
+                    print("requesting new race...")# sio_client.emit('request_new_race')
                 elif event_name == 'new_race_created':
                     new_race_created()
 
@@ -130,12 +138,19 @@ async def main():
             # Broadcast to connected clients
             await sio.emit('new_data', data.to_map())
             # Broadcast to remote server
-            sio_client.emit('write_data', data.to_map())
+            # sio_client.emit('write_data', data.to_map())
             await asyncio.sleep(.05)
         except Exception as e:
             print(f'Exception while parsing/sending data: {last_line}, {e}')
             pass
 
+        try: 
+            with open(data_file_name, 'a') as file:
+                csv_writer = writer(file)
+                data = parse_line(last_line)
+                data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
+                csv_writer.writerow(data_tuple)
+        except: pass
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())
