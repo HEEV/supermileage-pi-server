@@ -2,11 +2,16 @@ import asyncio
 import datetime
 import math
 from dataclasses import dataclass
-import serial
+
+from psycopg2 import DatabaseError
+from serial import Serial
+from serial import serialutil
 import socketio
 from aiohttp import web
 import aiohttp.web_runner
 from csv import writer
+from time import sleep
+import asyncpg
 
 # async in python is dumb idek what this does but stackoverflow said to do it and now it works
 import nest_asyncio
@@ -14,16 +19,9 @@ import nest_asyncio
 nest_asyncio.apply()
 
 # initialize the local python server
-sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
+localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
-sio.attach(app)
-
-# initialize server object for remote connection
-# TODO: update connect url for new server
-#sio_client = socketio.SimpleClient(ssl_verify=False)
-#sio_client.connect('https://judas.arkinsolomon.net')
-# Get permission from the remote server to transmit
-#sio_client.emit('request_write_permission', 'squid')
+localDisplaySio.attach(app)
 
 #Create CSV for this session
 data_file_name = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_car_data.csv')
@@ -41,7 +39,7 @@ def new_race_created():
     last_update = 0
 
 # Send request for a new race to remote server, not used?
-@sio.event
+@localDisplaySio.event
 async def request_new_race(sid):
     print("requesting new race...")
     #sio_client.emit('request_new_race')
@@ -87,13 +85,49 @@ def parse_line(line: str) -> CarData:
     # print(timestamp)
     return CarData(time=timestamp, voltage=float(output[0]), speed=car_speed, distance_traveled=distance_traveled)
 
+# create a serial connection to the arduino
+def create_serial_conn():
+    port = 'COM6' #COM6 /dev/tty.usbserial-14130
+    baud_rate = 9600
+    ser = None
+    arduino_connected = False
+    while not arduino_connected:
+        try:
+            ser = Serial(port, baud_rate, timeout=0.025)
+            arduino_connected = True
+        except serialutil.SerialException as e:
+            if "PermissionError" in str(e):
+                print(f'Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds...')
+            else:
+                print(f'Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {e}')
+            sleep(3)
+        except:
+            print("Unknown error occurred, retrying in 3 seconds...")
+            sleep(3)
+    return ser
+
+# Database init
+async def db_conn_init():
+    conn = None
+    try:
+        conn = await asyncpg.connect(database="b75mloimvzz5rvv5xcdk",
+                                     host="b75mloimvzz5rvv5xcdk-postgresql.services.clever-cloud.com",
+                                     user="uoh8y5okijoz5xxdiqit",
+                                     password="qFhTMlsKuzHqobkU2z24AzIOxXYisS",
+                                     port="50013")
+    except:
+        conn = None
+    return conn
 
 async def main():
+    print("Initializing Server...")
+    datapoint_count = 0
+    db_live = False
     # arduino serial connection initialization
-    port = '/dev/tty.usbserial-14130' #COM6
-    baud_rate = 9600
-    ser = serial.Serial(port, baud_rate, timeout=0.025)
+    ser = create_serial_conn()
 
+    # initialize server object for remote connection to database
+    conn = await db_conn_init()
 
     # Spinning up the local python server
     runner = aiohttp.web.AppRunner(app)
@@ -102,55 +136,79 @@ async def main():
     await aiohttp.web.TCPSite(runner, '0.0.0.0', 8080).start()
 
     # Main server loop
+    #sleep(3)
     while True:
+        # Re-instantiate database if it died at some point
+        if not db_live:
+            print("Database is down, attempting reconnect...")
+            conn = await db_conn_init()
+            if conn is None:
+                db_live = False
+            else:
+                db_live = True
 
-        # check for events from the remote server
+
         try:
-            event = None# sio_client.receive(timeout=1)
-            if event is not None:
-                event_name = event[0]
-                
-                # If we got write permission, get a new race save. 
-                # If the race is successfully created, set up to deliver data
-                if event_name == 'permission_granted':
-                    print("requesting new race...")# sio_client.emit('request_new_race')
-                elif event_name == 'new_race_created':
-                    new_race_created()
-
-            # print(f'received event: "{event[0]}" with arguments {event[1:]}')
-        except:
-            pass
-
-        # read serial data from arduino
-        try:
-            last_line = ser.readline().decode('utf-8')
-            next_line = ser.readline().decode('utf-8')
-            while next_line != '':
-                last_line = next_line
+            # read serial data from arduino
+            try:
+                last_line = ser.readline().decode('utf-8')
                 next_line = ser.readline().decode('utf-8')
-        except:
-            continue
+                while next_line != '':
+                    last_line = next_line
+                    next_line = ser.readline().decode('utf-8')
+            except serialutil.SerialException:
+                print(f'error reading serial, check Arduino connection')
+                ser = create_serial_conn()
+            except Exception as e:
+                print(f'Unknown error reading from serial: {e}')
+                continue
 
-        # parse the arduino data, send data to local (sio) and remote (sio_client)
-        try:
-            data = parse_line(last_line)
-            print(data)
-            # Broadcast to connected clients
-            await sio.emit('new_data', data.to_map())
-            # Broadcast to remote server
-            # sio_client.emit('write_data', data.to_map())
-            await asyncio.sleep(.05)
-        except Exception as e:
-            print(f'Exception while parsing/sending data: {last_line}, {e}')
-            pass
-
-        try: 
-            with open(data_file_name, 'a') as file:
-                csv_writer = writer(file)
+            # parse the arduino data, send data to local (sio) and remote (cursor)
+            try:
                 data = parse_line(last_line)
-                data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
-                csv_writer.writerow(data_tuple)
-        except: pass
+                print(data)
+                # Broadcast to connected clients
+                await localDisplaySio.emit('new_data', data.to_map())
+                # TODO: Create way to identify which car we are using
+                # insert values into database, but only every 10th datapoint
+                # This prevents over-saturation of the database connection
+                try:
+                    datapoint_count += 1
+                    if datapoint_count >= 20 and db_live:
+                        await asyncio.wait_for(
+                            conn.execute(
+                                f'insert into car_acquisition.car_data (car_id, time, voltage, speed, distance_traveled) VALUES (1, {data.time/1000}, {data.voltage}, {data.speed}, {data.distance_traveled})'),
+                            timeout=1.0  # Set your desired timeout in seconds
+                        )
+                        datapoint_count = 0
+                except DatabaseError as e:
+                    print(f'Error inserting into database, rolling back query: {e}')
+                    db_live = False
+                    conn = None
+                except (TimeoutError, asyncio.exceptions.CancelledError):
+                    print(f'Timeout error inserting into database')
+                    db_live = False
+                    conn = None
+
+                await asyncio.sleep(.05)
+            except Exception as e:
+                print(f'Exception while parsing/sending data: {last_line}, {e}')
+                pass
+
+            # Write data locally to a CSV file
+            try:
+                with open(data_file_name, 'a') as file:
+                    csv_writer = writer(file)
+                    data = parse_line(last_line)
+                    data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
+                    csv_writer.writerow(data_tuple)
+            except:
+                print("Error writing to CSV")
+        except KeyboardInterrupt as e:
+            print("Keyboard Interrupt, closing connections")
+            ser.close()
+            await conn.close()
+            break
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())
