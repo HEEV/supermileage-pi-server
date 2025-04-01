@@ -30,14 +30,13 @@ app = web.Application()
 localDisplaySio.attach(app)
 
 #Create CSV for this session
-data_file_name = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S_car_data.csv')
+data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
 with open(data_file_name, 'w') as file:
     csv_writer = writer(file)
     csv_writer.writerow(["time", "voltage", "speed", "distance_traveled"])
 
 distance_traveled = 0
 last_update = 0
-
 # reset base variables when new race is requested
 def new_race_created():
     global distance_traveled, last_update
@@ -76,7 +75,8 @@ class CarData:
             "velocity": self.speed,
             "distanceTraveled": self.distance_traveled,
             "batteryVoltage": self.voltage,
-            "engineTemp": 0,
+            "engineTemp": self.engine_temp,
+            "radTemp": self.rad_temp,
             "wind": 0,
             "tilt": 0
         }
