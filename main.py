@@ -51,8 +51,8 @@ class CarData:
     speed:             float
     distance_traveled: float
     car_id:            int
-    user_input1:       bool
-    user_input2:       bool
+    user_input1:       int
+    user_input2:       int
     engine_temp:       float
     rad_temp:          float
 
@@ -83,8 +83,8 @@ def parse_line(line: str) -> CarData:
 
     car_speed = float(output[1])
     car_id = int(output[3])
-    user_input1 = bool(output[4])
-    user_input2 = bool(output[5])
+    user_input1 = int(output[4])
+    user_input2 = int(output[5])
     engine_temp = float(output[6])
     rad_temp = float(output[7])
     if last_update > 0:
@@ -106,6 +106,9 @@ def create_serial_conn():
         port = usb_devices[0] #COM6
     else:
         port = '/dev/ttyUSB1'
+
+
+    port='COM6'
     baud_rate = 9600
     ser = None
     arduino_connected = False
