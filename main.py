@@ -108,7 +108,7 @@ def create_serial_conn():
         port = '/dev/ttyUSB1'
 
 
-    port='COM6'
+    #port='COM6' for testing only
     baud_rate = 9600
     ser = None
     arduino_connected = False
