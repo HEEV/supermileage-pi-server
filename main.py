@@ -77,6 +77,8 @@ class CarData:
             "batteryVoltage": self.voltage,
             "engineTemp": self.engine_temp,
             "radTemp": self.rad_temp,
+            "timerResetButton": self.user_input1,
+            "toggleTimeButton": self.user_input2,
             "wind": 0,
             "tilt": 0
         }
