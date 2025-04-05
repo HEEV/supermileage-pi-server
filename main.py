@@ -108,7 +108,7 @@ def create_serial_conn():
         port = '/dev/ttyUSB1'
 
 
-    #port='COM6' for testing only
+    # port='COM6' #for testing only
     baud_rate = 9600
     ser = None
     arduino_connected = False
@@ -131,11 +131,11 @@ def create_serial_conn():
 async def db_conn_init():
     conn = None
     try:
-        conn = await asyncpg.connect(database="b75mloimvzz5rvv5xcdk",
-                                     host="b75mloimvzz5rvv5xcdk-postgresql.services.clever-cloud.com",
+        conn = await asyncpg.connect(database="b7ghmkoed5btwtb6org5",
+                                     host="b7ghmkoed5btwtb6org5-postgresql.services.clever-cloud.com",
                                      user="uoh8y5okijoz5xxdiqit",
                                      password="qFhTMlsKuzHqobkU2z24AzIOxXYisS",
-                                     port="50013")
+                                     port="6642")
     except:
         conn = None
     return conn
