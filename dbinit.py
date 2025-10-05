@@ -1,11 +1,12 @@
 import psycopg2
+from os import getenv
 
 
-conn = psycopg2.connect(database="b75mloimvzz5rvv5xcdk",
-                                host="b75mloimvzz5rvv5xcdk-postgresql.services.clever-cloud.com",
-                                user="uoh8y5okijoz5xxdiqit",
-                                password="qFhTMlsKuzHqobkU2z24AzIOxXYisS",
-                                port="50013")
+conn = psycopg2.connect(database=getenv('DB'),
+                            host=getenv('DB_HOST'),
+                            user=getenv('DB_USER'),
+                            password=getenv('DB_PASSWORD'),
+                            port=getenv('DB_PORT'))
 
 cursor = conn.cursor()
 
