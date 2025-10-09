@@ -3,6 +3,7 @@ import datetime
 import glob
 import math
 from dataclasses import dataclass
+from os import getenv
 from psycopg2 import DatabaseError
 from serial import Serial
 from serial import serialutil
@@ -131,11 +132,11 @@ def create_serial_conn():
 async def db_conn_init():
     conn = None
     try:
-        conn = await asyncpg.connect(database="b7ghmkoed5btwtb6org5",
-                                     host="b7ghmkoed5btwtb6org5-postgresql.services.clever-cloud.com",
-                                     user="uoh8y5okijoz5xxdiqit",
-                                     password="qFhTMlsKuzHqobkU2z24AzIOxXYisS",
-                                     port="6642")
+        conn = await asyncpg.connect(database=getenv('DB'),
+                                     host=getenv('DB_HOST'),
+                                     user=getenv('DB_USER'),
+                                     password=getenv('DB_PASSWORD'),
+                                     port=getenv('DB_PORT'))
     except:
         conn = None
     return conn
