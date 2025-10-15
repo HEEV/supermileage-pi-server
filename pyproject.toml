@@ -11,11 +11,11 @@ dependencies = [
     "psycopg2-binary>=2.9.10",
     "pyserial>=3.5",
     "python-socketio>=5.13.0",
+    "dotenv>=0.9.9",
 ]
 
-[tool.uv]
-dev-dependencies = [
-]
+[dependency-groups]
+dev = []
 
 [tool.black]
 line-length = 88
