@@ -1,4 +1,5 @@
 import main
+import os
 
 def test_cardata_to_map_and_fields():
     cd = main.CarData(
@@ -67,3 +68,10 @@ def test_new_race_created_resets_globals():
     main.new_race_created()
     assert main.distance_traveled == 0
     assert main.last_update == 0
+
+def test_create_serial_conn_while_testing():
+    os.environ['TESTING'] = 'True'
+    ser = main.create_serial_conn()
+    assert ser is not None
+    assert ser.read_response() is not None
+    assert ser.is_open() == True
