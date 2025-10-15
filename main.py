@@ -1,23 +1,25 @@
 import asyncio
 import datetime
-import glob
 import math
 from dataclasses import dataclass
 from os import getenv
 from psycopg2 import DatabaseError
-from serial import Serial
 from serial import serialutil
 import socketio
 from aiohttp import web
-import aiohttp.web_runner
 from csv import writer
 from time import sleep
 import asyncpg
+from sm_serial import SmSerial
+from dotenv import load_dotenv
 
 # async in python is dumb idek what this does but stackoverflow said to do it and now it works
 import nest_asyncio
 
 nest_asyncio.apply()
+
+# Load environment variables from .env file
+load_dotenv()
 
 # initialize the local python server
 localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
@@ -101,21 +103,13 @@ def parse_line(line: str) -> CarData:
                     car_id=car_id, user_input1=user_input1, user_input2=user_input2, engine_temp=engine_temp, rad_temp=rad_temp)
 
 # create a serial connection to the arduino
-def create_serial_conn():
-    usb_devices = glob.glob("/dev/ttyUSB*")
-    port = ''
-    if usb_devices:
-        port = usb_devices[0] #COM6
-    else:
-        port = '/dev/ttyUSB1'
-
-    # port='COM6' #for testing only
-    baud_rate = 9600
+def create_serial_conn() -> SmSerial | None:
     ser = None
     arduino_connected = False
     while not arduino_connected:
         try:
-            ser = Serial(port, baud_rate, timeout=0.025)
+            #port='COM6' #for testing on Windows only
+            ser = SmSerial(timeout=0.025)
             arduino_connected = True
         except serialutil.SerialException as e:
             if "PermissionError" in str(e):
@@ -152,10 +146,10 @@ async def main():
     conn = await db_conn_init()
 
     # Spinning up the local python server
-    runner = aiohttp.web.AppRunner(app)
+    runner = web.AppRunner(app)
 
     await runner.setup()
-    await aiohttp.web.TCPSite(runner, '0.0.0.0', 8080).start()
+    await web.TCPSite(runner, '0.0.0.0', 8080).start()
 
     # Main server loop
     #sleep(3)
@@ -173,11 +167,11 @@ async def main():
         try:
             # read serial data from arduino
             try:
-                last_line = ser.readline().decode('utf-8')
-                next_line = ser.readline().decode('utf-8')
+                last_line = ser.read_response()
+                next_line = ser.read_response()
                 while next_line != '':
                     last_line = next_line
-                    next_line = ser.readline().decode('utf-8')
+                    next_line = ser.read_response()
             except serialutil.SerialException:
                 print(f'error reading serial, check Arduino connection')
                 ser = create_serial_conn()
