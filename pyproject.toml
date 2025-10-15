@@ -15,6 +15,7 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = [
+    "pytest>=8.3.5",
 ]
 
 [tool.black]
