@@ -1,6 +1,11 @@
-*venv
+# Environment and IDE specific files
 .idea/
-.env
-Data/
+.vscode/
+.pytest_cache/
 __pycache__/
 *.pyc
+
+# Local environment variables and data directory
+*venv
+.env
+Data/
