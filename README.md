@@ -24,7 +24,11 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 To build the dependencies needed for this repository, run the following command:
 ```bash
+# normal
 uv sync
+
+# with dev dependencies
+uv sync --dev
 ```
 
 To run the server within the uv environment, execute the following command:
@@ -34,7 +38,7 @@ uv run main.py
 
 To run the test suite [with or without the verbose option], simply execute the following:
 ```bash
-uv run pytest [-v] test.py 
+uv run pytest
 ```
 
 Please refer to the [uv documentation](https://docs.astral.sh/uv/getting-started/) for more details on adding packages, removing packages, and more.
