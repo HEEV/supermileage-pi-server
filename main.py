@@ -72,6 +72,15 @@ class CarData:
             "wind": 0,
             "tilt": 0
         }
+    
+# Environment variable flags to enable/disable data sending
+def get_env_flags():
+    return {
+        'DISABLE_REMOTE': getenv('DISABLE_REMOTE', 'False') == 'True',
+        'DISABLE_LOCAL': getenv('DISABLE_LOCAL', 'False') == 'True',
+        'DISABLE_DISPLAY': getenv('DISABLE_DISPLAY', 'False') == 'True', 
+        'TESTING': getenv('TESTING', 'False') == 'True'
+    }
 
 # parse the serial data from the arduino into CarData object
 def parse_line(line: str) -> CarData:
@@ -136,11 +145,18 @@ async def db_conn_init():
     return conn
 
 async def main():
+
+    flags = get_env_flags()
+    DISABLE_REMOTE = flags['DISABLE_REMOTE']
+    DISABLE_LOCAL = flags['DISABLE_LOCAL']
+    DISABLE_DISPLAY = flags['DISABLE_DISPLAY']
+    TESTING = flags['TESTING']
     print("Initializing Server...")
     datapoint_count = 0
     db_live = False
+
     # arduino serial connection initialization
-    ser = create_serial_conn()
+    ser = create_serial_conn() if not TESTING else None
 
     # initialize server object for remote connection to database
     conn = await db_conn_init()
@@ -153,78 +169,79 @@ async def main():
 
     # Main server loop
     #sleep(3)
-    while True:
-        # Re-instantiate database if it died at some point
-        if not db_live:
-            print("Database is down, attempting reconnect...")
-            conn = await db_conn_init()
-            if conn is None:
-                db_live = False
-            else:
-                db_live = True
+    if ser is not None:
+        while True:
+            # Re-instantiate database if it died at some point
+            if not db_live:
+                print("Database is down, attempting reconnect...")
+                conn = await db_conn_init()
+                if conn is None:
+                    db_live = False
+                else:
+                    db_live = True
 
-
-        try:
-            # read serial data from arduino
             try:
-                last_line = ser.read_response()
-                next_line = ser.read_response()
-                while next_line != '':
-                    last_line = next_line
-                    next_line = ser.read_response()
-            except serialutil.SerialException:
-                print(f'error reading serial, check Arduino connection')
-                ser = create_serial_conn()
-            except Exception as e:
-                print(f'Unknown error reading from serial: {e}')
-                continue
-
-            # parse the arduino data, send data to local (sio) and remote (cursor)
-            try:
-                data = parse_line(last_line)
-                print(data)
-                # Broadcast to connected clients
-                await localDisplaySio.emit('new_data', data.to_map())
-                # TODO: Create way to identify which car we are using
-                # insert values into database, but only every 20th datapoint
-                # This prevents over-saturation of the database connection
+                # read serial data from arduino
                 try:
-                    datapoint_count += 1
-                    if datapoint_count >= 20 and db_live:
-                        await asyncio.wait_for(
-                            conn.execute(
-                                f'insert into car_acquisition.car_data (car_id, time, voltage, speed, engine_temp, rad_temp, distance_traveled) VALUES ({data.car_id}, {data.time}, {data.voltage}, {data.speed}, {data.engine_temp}, {data.rad_temp}, {data.distance_traveled})'),
-                            timeout=1.0  # Set your desired timeout in seconds
-                        )
-                        datapoint_count = 0
-                except DatabaseError as e:
-                    print(f'Error inserting into database, rolling back query: {e}')
-                    db_live = False
-                    conn = None
-                except (TimeoutError, asyncio.exceptions.CancelledError):
-                    print(f'Timeout error inserting into database')
-                    db_live = False
-                    conn = None
+                    last_line = ser.read_response()
+                    next_line = ser.read_response()
+                    while next_line != '':
+                        last_line = next_line
+                        next_line = ser.read_response()
+                except serialutil.SerialException:
+                    print(f'error reading serial, check Arduino connection')
+                    ser = create_serial_conn()
+                except Exception as e:
+                    print(f'Unknown error reading from serial: {e}')
+                    continue
 
-                await asyncio.sleep(.05)
-            except Exception as e:
-                print(f'Exception while parsing/sending data: {last_line}, {e}')
-                pass
-
-            # Write data locally to a CSV file
-            try:
-                with open(data_file_name, 'a') as file:
-                    csv_writer = writer(file)
+                # parse the arduino data, send data to local (sio) and remote (cursor)
+                try:
                     data = parse_line(last_line)
-                    data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
-                    csv_writer.writerow(data_tuple)
-            except:
-                print("Error writing to CSV")
-        except KeyboardInterrupt as e:
-            print("Keyboard Interrupt, closing connections")
-            ser.close()
-            await conn.close()
-            break
+                    print(data)
+                    # Broadcast to connected clients
+                    if not DISABLE_DISPLAY:
+                        await localDisplaySio.emit('new_data', data.to_map())
+                        # TODO: Create way to identify which car we are using
+                        # insert values into database, but only every 20th datapoint
+                        # This prevents over-saturation of the database connection
+                    try:
+                        datapoint_count += 1
+                        if datapoint_count >= 20 and db_live and not DISABLE_REMOTE:
+                            await asyncio.wait_for(
+                                conn.execute(
+                                    f'insert into car_acquisition.car_data (car_id, time, voltage, speed, engine_temp, rad_temp, distance_traveled) VALUES ({data.car_id}, {data.time}, {data.voltage}, {data.speed}, {data.engine_temp}, {data.rad_temp}, {data.distance_traveled})'),
+                                timeout=1.0  # Set your desired timeout in seconds
+                            )
+                            datapoint_count = 0
+                    except DatabaseError as e:
+                        print(f'Error inserting into database, rolling back query: {e}')
+                        db_live = False
+                        conn = None
+                    except (TimeoutError, asyncio.exceptions.CancelledError):
+                        print(f'Timeout error inserting into database')
+                        db_live = False
+                        conn = None
+
+                    await asyncio.sleep(.05)
+                except Exception as e:
+                    print(f'Exception while parsing/sending data: {last_line}, {e}')
+                    pass
+
+                # Write data locally to a CSV file
+                if not DISABLE_LOCAL:
+                    try:
+                        with open(data_file_name, 'a') as file:
+                            csv_writer = writer(file)
+                            data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
+                            csv_writer.writerow(data_tuple)
+                    except:
+                        print("Error writing to CSV")
+            except KeyboardInterrupt as e:
+                print("Keyboard Interrupt, closing connections")
+                ser.close()
+                await conn.close()
+                break
 
 if __name__ == '__main__':
     asyncio.get_event_loop().run_until_complete(main())
