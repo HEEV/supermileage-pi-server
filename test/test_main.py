@@ -1,5 +1,4 @@
 import os
-
 import main
 
 def test_cardata_to_map_and_fields():
