@@ -156,7 +156,7 @@ async def main():
     db_live = False
 
     # arduino serial connection initialization
-    ser = create_serial_conn() if not TESTING else None
+    ser = create_serial_conn() 
 
     # initialize server object for remote connection to database
     conn = await db_conn_init()
