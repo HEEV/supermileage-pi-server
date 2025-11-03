@@ -140,7 +140,6 @@ async def test_disable_remote_blocks_database(mock_dependencies):
     
     mock_dependencies['db'].execute.assert_not_called()
 
-
 @pytest.mark.asyncio
 async def test_enable_remote_allows_database(mock_dependencies):
     """Database insertions should work when DISABLE_REMOTE is False"""
@@ -157,6 +156,8 @@ async def test_enable_remote_allows_database(mock_dependencies):
         pass
     
     mock_dependencies['db'].execute.assert_called()
+
+# Test DISABLE_LOCAL flag
 
 @pytest.mark.asyncio
 async def test_disable_local_blocks_csv_write(mock_dependencies):
