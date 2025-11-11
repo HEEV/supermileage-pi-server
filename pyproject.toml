@@ -14,8 +14,8 @@ dependencies = [
     "dotenv>=0.9.9",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=0.24.0",
 ]
@@ -32,4 +32,4 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["test"]
-pythonpath = ["./"]
+pythonpath = ["./src"]

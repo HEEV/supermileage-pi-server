@@ -11,6 +11,7 @@ from csv import writer
 from time import sleep
 import asyncpg
 from sm_serial import SmSerial
+from configuration_generator import ConfigurationGenerator
 from dotenv import load_dotenv
 
 # async in python is dumb idek what this does but stackoverflow said to do it and now it works
@@ -20,6 +21,9 @@ nest_asyncio.apply()
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Automatically generate configuration from a JSON file defined in the environment.
+config_gen = ConfigurationGenerator()
 
 # initialize the local python server
 localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
@@ -72,7 +76,7 @@ class CarData:
             "wind": 0,
             "tilt": 0
         }
-    
+
 # Environment variable flags to enable/disable data sending
 def get_env_flags():
     return {
