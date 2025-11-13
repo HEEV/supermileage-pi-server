@@ -13,12 +13,12 @@ class DataReader:
         self._distance_traveled = 0
         self._last_update = 0
     
-    def read_sensor_data(self, raw_data: str) -> dict:
+    def read_sensor_data(self, raw_data: bytes) -> dict:
         """
         Reads raw sensor data and converts it based on the configuration.
 
         Args:
-            raw_data (str): Comma-separated string of raw sensor values.
+            raw_data (bytes): Raw bytes of sensor values.
         Returns:
             dict: A dictionary with sensor names as keys and converted values.
         """

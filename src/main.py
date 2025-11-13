@@ -33,11 +33,14 @@ localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origin
 app = web.Application()
 localDisplaySio.attach(app)
 
-#Create CSV for this session
+# Create CSV for this session
 data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
 with open(data_file_name, 'w') as file:
     csv_writer = writer(file)
-    csv_writer.writerow(["time", "voltage", "speed", "distance_traveled"])
+    hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
+    dynamic_sensors = [sensor.name for _, sensor in config_gen.get_sensors().items()]
+    derived_sensors = ["distance_traveled", "time"]
+    csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
 
 distance_traveled = 0
 last_update = 0
@@ -132,11 +135,11 @@ async def main():
             try:
                 # read serial data from arduino
                 try:
-                    last_line = ser.read_response()
-                    next_line = ser.read_response()
+                    last_line = ser.read_response(23)
+                    next_line = ser.read_response(23)
                     while next_line != '':
                         last_line = next_line
-                        next_line = ser.read_response()
+                        next_line = ser.read_response(23)
                 except serialutil.SerialException:
                     print(f'error reading serial, check Arduino connection')
                     ser = create_serial_conn()
@@ -152,6 +155,7 @@ async def main():
                     if not DISABLE_DISPLAY:
                         await localDisplaySio.emit('new_data', data)
                         # TODO: Create way to identify which car we are using
+                        # TODO: populate this based on config available sensors, not hardcoded
                         # insert values into database, but only every 20th datapoint
                         # This prevents over-saturation of the database connection
                     try:
@@ -182,7 +186,7 @@ async def main():
                     try:
                         with open(data_file_name, 'a') as file:
                             csv_writer = writer(file)
-                            data_list = [data["time"], data["voltage"], data["speed"], data["distance_traveled"]]
+                            data_list = [ data[key] for key in data ]
                             csv_writer.writerow(data_list)
                     except:
                         print("Error writing to CSV")
