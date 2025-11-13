@@ -1,0 +1,37 @@
+{
+    "cars": {
+        "car1": {
+            "active": true,
+            "theme": "color-theme",
+            "metadata": {
+                "weight": 200,
+                "power_plant": "gasoline"
+            },
+            "sensors": {
+                "channelA0": {
+                    "name": "voltage",
+                    "unit": "volts",
+                    "conversion_factor": 0.35,
+                    "input_type": "analog",
+                    "limits": {
+                        "min": 0.0,
+                        "max": 36.0
+                    }
+                },
+                "channel2": {
+                    "name": "button",
+                    "unit": "",
+                    "conversion_factor": 0.0,
+                    "input_type": "digital",
+                    "limits": {}
+                }
+            }
+        },
+        "car2": {
+            "active": false,
+            "theme": "color-theme",
+            "metadata": {},
+            "sensors": {}
+        }
+    }
+} 

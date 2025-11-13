@@ -31,14 +31,16 @@ class Sensor:
             if self.conversion_factor is None:
                 raise ValueError('Conversion factor must be specified for analog sensors')
     
-    def from_dict(self, data: dict) -> None:
-        self.__init__(
-            name = data.get("name"),
-            input_type = data.get("input_type"),
-            unit = data.get("unit", None),
-            conversion_factor = data.get("conversion_factor", None),
-            limit_min = data.get("limit_min", None),
-            limit_max = data.get("limit_max", None)
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Sensor':
+        """Create a Sensor instance from a dictionary"""
+        return cls(
+            name=data.get("name"),
+            input_type=data.get("input_type"),
+            unit=data.get("unit", None),
+            conversion_factor=data.get("conversion_factor", None),
+            limit_min=data.get("limit_min", None),
+            limit_max=data.get("limit_max", None)
         )
 
 class Metadata:
@@ -47,14 +49,26 @@ class Metadata:
     power_plant: PowerPlant | None = None
     drag_coefficient: float | None = None
 
-    def from_dict(self, data: dict) -> None:
-        self.weight = data.get("weight", None)
-        self.power_plant = data.get("power_plant", None)
-        self.drag_coefficient = data.get("drag_coefficient", None)
+    def __init__(self, weight: int | None = None, 
+                 power_plant: PowerPlant | None = None,
+                 drag_coefficient: float | None = None):
+        self.weight = weight
+        self.power_plant = power_plant
+        self.drag_coefficient = drag_coefficient
+
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Metadata':
+        """Create a Metadata instance from a dictionary"""
+        return cls(
+            weight=data.get("weight", None),
+            power_plant=data.get("power_plant", None),
+            drag_coefficient=data.get("drag_coefficient", None)
+        )
 
 class Car:
     """Class representing a car configuration"""
     name: str
+    active: bool
     theme: str
     sensors: dict[str, Sensor]
     metadata: Metadata
@@ -71,7 +85,7 @@ class ConfigurationGenerator:
     def _load_config(self):
         """Load configuration from a JSON file"""
         sensor_list: dict[str, Sensor] = {}
-        metadata_obj: Metadata = Metadata()
+        metadata_obj: Metadata = None
 
         with open(self._config_file_path, 'r') as config_file:
             config: dict = json.load(config_file)
@@ -83,20 +97,21 @@ class ConfigurationGenerator:
             for car_name, car in cars.items():
                 # Load sensors
                 sensors = car.get("sensors", None)
-                if not sensors:
+                if sensors is None:
                     raise ValueError(f'Sensors not defined for car: {car_name}')
                 for sensor_name, sensor in sensors.items():
                     sensor_list[sensor_name] = Sensor.from_dict(sensor)
                 
                 # Load metadata
                 metadata: dict = car.get("metadata", None)
-                if not metadata:
+                if metadata is None:
                     raise ValueError(f'Metadata not defined for car: {car_name}')
-                metadata_obj.from_dict(metadata)
+                metadata_obj = Metadata.from_dict(metadata)
 
                 # Create Car object
                 car_obj: Car = Car()
                 car_obj.name = car_name
+                car_obj.active = car.get("active", False)
                 car_obj.theme = car.get("theme", "default")
                 car_obj.sensors = sensor_list
                 car_obj.metadata = metadata_obj
