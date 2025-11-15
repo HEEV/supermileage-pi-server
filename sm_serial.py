@@ -63,7 +63,7 @@ class SmSerial:
         
         # Actual read from serial port
         try:
-            response = self.ser.readline().decode('utf-8').strip()
+            response = self._ser.readline().decode('utf-8')
             print(f"Received: {response}")
             return response
         except serial.SerialException as e:

@@ -172,7 +172,7 @@ async def main():
     if ser is not None:
         while True:
             # Re-instantiate database if it died at some point
-            if not db_live:
+            if not db_live and not DISABLE_REMOTE:
                 print("Database is down, attempting reconnect...")
                 conn = await db_conn_init()
                 if conn is None:
