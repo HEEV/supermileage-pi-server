@@ -118,8 +118,14 @@ class ConfigurationGenerator:
                 return car.sensors
         raise ValueError(f'Car not found: {car_name}')
     
-    def get_metadata(self, car_name) -> Metadata:
+    def get_metadata(self, car_name = None) -> Metadata:
         """Get the metadata for a specified car"""
+        # Return active car if no name provided
+        if (car_name is None):
+            for car in self.config:
+                if car.active:
+                    return car.metadata
+        # Otherwise, return specified car
         for car in self.config:
             if car.name == car_name:
                 return car.metadata

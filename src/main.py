@@ -103,6 +103,7 @@ async def main():
     DISABLE_LOCAL = flags['DISABLE_LOCAL']
     DISABLE_DISPLAY = flags['DISABLE_DISPLAY']
     TESTING = flags['TESTING']
+    PACKET_SIZE = int(getenv('DATA_PACKET_SIZE')) if getenv('DATA_PACKET_SIZE') else 23
     print("Initializing Server...")
     datapoint_count = 0
     db_live = False
@@ -135,11 +136,11 @@ async def main():
             try:
                 # read serial data from arduino
                 try:
-                    last_line = ser.read_response(23)
-                    next_line = ser.read_response(23)
+                    last_line = ser.read_response(PACKET_SIZE)
+                    next_line = ser.read_response(PACKET_SIZE)
                     while next_line != '':
                         last_line = next_line
-                        next_line = ser.read_response(23)
+                        next_line = ser.read_response(PACKET_SIZE)
                 except serialutil.SerialException:
                     print(f'error reading serial, check Arduino connection')
                     ser = create_serial_conn()

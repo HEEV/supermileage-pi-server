@@ -31,7 +31,7 @@ class DataReader:
         sensor_data = {}
 
         # Handle the hardcoded sensors first
-        sensor_data["speed"] = unpacked_data[0]
+        sensor_data["speed"] = round(unpacked_data[0], 2)
         sensor_data["airspeed"] = unpacked_data[1]
         sensor_data["engine_temp"] = unpacked_data[2]
         sensor_data["rad_temp"] = unpacked_data[3]
@@ -42,6 +42,8 @@ class DataReader:
             if car.active:
                 sensors = car.sensors
                 for sensor_name, sensor in sensors.items():
+                    if sensor.conversion_factor == 0.0:
+                        sensor.conversion_factor = 1.0
                     match sensor_name:
                         case "channel0":
                             sensor_data[sensor.name] = unpacked_data[4] * sensor.conversion_factor
