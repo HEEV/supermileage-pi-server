@@ -9,16 +9,19 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 ## Environment
 
-| Variable Name    | Description                                                                | Example                                     |
-| ---------------- | -------------------------------------------------------------------------- | ------------------------------------------- |
-| DB_HOST          | Database host URL                                                          | 123abc-postgresql.services.clever-cloud.com |
-| DB_USER          | Database username                                                          | username                                    |
-| DB_PASSWORD      | Database password                                                          | password                                    |
-| DB_PORT          | Database port number                                                       | 6642                                        |
-| DB               | Database name                                                              | b7ghmkoed5btwtb6org5                        |
-| TESTING          | OPTIONAL boolean to enable testing behavior, including mocking connections | True                                        |
-| CONFIG_FILE_PATH | path to the sensor channel configuration file                              | path/to/config.json                         |
-| DATA_PACKET_SIZE | OPTIONAL the size of the data packet expected from the Arduino             | 23                                          |
+| Variable Name    | Description                                                                    | Example                                     |
+| ---------------- | ------------------------------------------------------------------------------ | ------------------------------------------- |
+| DB_HOST          | Database host URL                                                              | 123abc-postgresql.services.clever-cloud.com |
+| DB_USER          | Database username                                                              | username                                    |
+| DB_PASSWORD      | Database password                                                              | password                                    |
+| DB_PORT          | Database port number                                                           | 6642                                        |
+| DB               | Database name                                                                  | b7ghmkoed5btwtb6org5                        |
+| CONFIG_FILE_PATH | path to the sensor channel configuration file                                  | path/to/config.json                         |
+| DATA_PACKET_SIZE | **OPTIONAL** the size of the data packet expected from the Arduino             | 23                                          |
+| TESTING          | **OPTIONAL** boolean to enable testing behavior, including mocking connections | True                                        |
+| DISABLE_REMOTE   | **OPTIONAL** boolean to disable the remote data connection                     | True                                        |
+| DISABLE_LOCAL    | **OPTIONAL** boolean to disable the local file cache                           | True                                        |
+| DISABLE_DISPLAY  | **OPTIONAL** boolean to disable the local display data connection              | True                                        | 
 
 ## Installation
 
