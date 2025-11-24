@@ -1,7 +1,7 @@
 [project]
 name = "supermileage-pi-server"
 version = "0.1.0"
-description = "Raspberry Pi server for supermileage vehicle"
+description = "Raspberry Pi server for supermileage vehicles"
 readme = "README.md"
 requires-python = ">=3.8"
 dependencies = [
@@ -14,8 +14,9 @@ dependencies = [
     "dotenv>=0.9.9",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
+    "coverage>=7.6.1",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.24.0",
 ]
@@ -32,4 +33,12 @@ warn_unused_configs = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["test"]
-pythonpath = ["./"]
+pythonpath = ["./src"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test/*",
+    "*/__pycache__/*",
+]

@@ -1,7 +1,5 @@
 import asyncio
 import datetime
-import math
-from dataclasses import dataclass
 from os import getenv
 from psycopg2 import DatabaseError
 from serial import serialutil
@@ -10,7 +8,9 @@ from aiohttp import web
 from csv import writer
 from time import sleep
 import asyncpg
+from data_reader import DataReader
 from sm_serial import SmSerial
+from configuration_generator import ConfigurationGenerator
 from dotenv import load_dotenv
 
 # async in python is dumb idek what this does but stackoverflow said to do it and now it works
@@ -21,24 +21,30 @@ nest_asyncio.apply()
 # Load environment variables from .env file
 load_dotenv()
 
+# Automatically generate configuration from a JSON file defined in the environment.
+config_gen = ConfigurationGenerator()
+
+data_reader = DataReader(config_gen)
+
 # initialize the local python server
 localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 localDisplaySio.attach(app)
 
-#Create CSV for this session
+# Create CSV for this session
 data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
 with open(data_file_name, 'w') as file:
     csv_writer = writer(file)
-    csv_writer.writerow(["time", "voltage", "speed", "distance_traveled"])
+    hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
+    dynamic_sensors = [sensor.name for _, sensor in config_gen.get_sensors().items()]
+    derived_sensors = ["distance_traveled", "time"]
+    csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
 
 distance_traveled = 0
 last_update = 0
 # reset base variables when new race is requested
 def new_race_created():
-    global distance_traveled, last_update
-    distance_traveled = 0
-    last_update = 0
+    data_reader.reset_distance()
 
 # Send request for a new race to remote server, not used?
 @localDisplaySio.event
@@ -46,33 +52,6 @@ async def request_new_race(sid):
     print("requesting new race...")
     #sio_client.emit('request_new_race')
 
-# The data object format for sending arduino data to display servers
-@dataclass
-class CarData:
-    time:              int
-    voltage:           float
-    speed:             float
-    distance_traveled: float
-    car_id:            int
-    user_input1:       int
-    user_input2:       int
-    engine_temp:       float
-    rad_temp:          float
-
-    def to_map(self):
-        return {
-            "time": self.time,
-            "velocity": self.speed,
-            "distanceTraveled": self.distance_traveled,
-            "batteryVoltage": self.voltage,
-            "engineTemp": self.engine_temp,
-            "radTemp": self.rad_temp,
-            "timerResetButton": self.user_input1,
-            "toggleTimeButton": self.user_input2,
-            "wind": 0,
-            "tilt": 0
-        }
-    
 # Environment variable flags to enable/disable data sending
 def get_env_flags():
     return {
@@ -81,35 +60,6 @@ def get_env_flags():
         'DISABLE_DISPLAY': getenv('DISABLE_DISPLAY', 'False') == 'True', 
         'TESTING': getenv('TESTING', 'False') == 'True'
     }
-
-# parse the serial data from the arduino into CarData object
-def parse_line(line: str) -> CarData:
-    global last_update, distance_traveled
-
-    if distance_traveled > 100000000:
-        distance_traveled = 0
-
-    output = line.split(',')
-    utc_dt_aware = datetime.datetime.now(datetime.timezone.utc)
-    timestamp = math.floor(utc_dt_aware.timestamp() * 1000)
-
-    car_speed = float(output[1])
-    car_id = int(output[3])
-    user_input1 = int(output[4])
-    user_input2 = int(output[5])
-    engine_temp = float(output[6])
-    rad_temp = float(output[7])
-    if last_update > 0:
-        delta = timestamp - last_update
-
-        # mph -> Ft/ms
-        speedFtms = 0.00146667 * car_speed
-        distance_traveled += speedFtms * delta
-    last_update = timestamp
-    # print(timestamp)
-
-    return CarData(time=timestamp, voltage=float(output[0]), speed=car_speed, distance_traveled=distance_traveled,
-                    car_id=car_id, user_input1=user_input1, user_input2=user_input2, engine_temp=engine_temp, rad_temp=rad_temp)
 
 # create a serial connection to the arduino
 def create_serial_conn() -> SmSerial | None:
@@ -151,6 +101,7 @@ async def main():
     DISABLE_LOCAL = flags['DISABLE_LOCAL']
     DISABLE_DISPLAY = flags['DISABLE_DISPLAY']
     TESTING = flags['TESTING']
+    PACKET_SIZE = int(getenv('DATA_PACKET_SIZE')) if getenv('DATA_PACKET_SIZE') else 23
     print("Initializing Server...")
     datapoint_count = 0
     db_live = False
@@ -183,11 +134,11 @@ async def main():
             try:
                 # read serial data from arduino
                 try:
-                    last_line = ser.read_response()
-                    next_line = ser.read_response()
+                    last_line = ser.read_response(PACKET_SIZE)
+                    next_line = ser.read_response(PACKET_SIZE)
                     while next_line != '':
                         last_line = next_line
-                        next_line = ser.read_response()
+                        next_line = ser.read_response(PACKET_SIZE)
                 except serialutil.SerialException:
                     print(f'error reading serial, check Arduino connection')
                     ser = create_serial_conn()
@@ -197,12 +148,13 @@ async def main():
 
                 # parse the arduino data, send data to local (sio) and remote (cursor)
                 try:
-                    data = parse_line(last_line)
+                    data = data_reader.read_sensor_data(last_line)
                     print(data)
                     # Broadcast to connected clients
                     if not DISABLE_DISPLAY:
-                        await localDisplaySio.emit('new_data', data.to_map())
+                        await localDisplaySio.emit('new_data', data)
                         # TODO: Create way to identify which car we are using
+                        # TODO: populate this based on config available sensors, not hardcoded
                         # insert values into database, but only every 20th datapoint
                         # This prevents over-saturation of the database connection
                     try:
@@ -210,7 +162,7 @@ async def main():
                         if datapoint_count >= 20 and db_live and not DISABLE_REMOTE:
                             await asyncio.wait_for(
                                 conn.execute(
-                                    f'insert into car_acquisition.car_data (car_id, time, voltage, speed, engine_temp, rad_temp, distance_traveled) VALUES ({data.car_id}, {data.time}, {data.voltage}, {data.speed}, {data.engine_temp}, {data.rad_temp}, {data.distance_traveled})'),
+                                    f'insert into car_acquisition.car_data (car_id, time, voltage, speed, engine_temp, rad_temp, distance_traveled) VALUES ({0}, {data["time"]}, {data["voltage"]}, {data["speed"]}, {data["engine_temp"]}, {data["rad_temp"]}, {data["distance_traveled"]})'),
                                 timeout=1.0  # Set your desired timeout in seconds
                             )
                             datapoint_count = 0
@@ -233,8 +185,8 @@ async def main():
                     try:
                         with open(data_file_name, 'a') as file:
                             csv_writer = writer(file)
-                            data_tuple = [data.time, data.voltage, data.speed, data.distance_traveled]
-                            csv_writer.writerow(data_tuple)
+                            data_list = [ data[key] for key in data ]
+                            csv_writer.writerow(data_list)
                     except:
                         print("Error writing to CSV")
             except KeyboardInterrupt as e:

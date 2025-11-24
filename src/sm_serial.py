@@ -1,5 +1,6 @@
 import glob
 from os import getenv
+import struct
 from typing import Optional
 
 import serial
@@ -42,9 +43,12 @@ class SmSerial:
                 print(f"Failed to open serial port {port}: {e}")
                 raise
 
-    def read_response(self) -> str:
+    def read_response(self, size: int = 32) -> str:
         """
         Read a line of data from the Arduino.
+        
+        Args:
+            size: Number of bytes to read from the serial port.
         
         Returns:
             Decoded string response from Arduino
@@ -55,7 +59,13 @@ class SmSerial:
         if self._testing:
             if not self._test_data_sent:
                 self._test_data_sent = True
-                response = "12.5, 25.3, 1543.7, 1, 0, 1, 78.2, 65.4"
+                response = struct.pack('<ffffBBBBBH', 
+                                25.3,  # speed
+                                5.2,   # airspeed
+                                78.2,  # engineTemp
+                                65.4,  # radTemp
+                                0, 1, 0, 1, 0,  # digital channels
+                                100)  # analog channel
                 return response
             else:
                 self._test_data_sent = False
@@ -63,15 +73,11 @@ class SmSerial:
         
         # Actual read from serial port
         try:
-            response = self._ser.readline().decode('utf-8')
-            print(f"Received: {response}")
+            response = self._ser.read(size)
             return response
         except serial.SerialException as e:
             print(f"Error reading from serial: {e}")
             raise
-        except UnicodeDecodeError as e:
-            print(f"Error decoding serial data: {e}")
-            return ""
         
     def is_open(self) -> bool:
         """Check if the serial connection is open."""

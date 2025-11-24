@@ -1,3 +1,4 @@
+import struct
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock, mock_open
 import os
@@ -45,7 +46,13 @@ def mock_dependencies():
         # Setup serial mock
         mock_ser = MagicMock()
         mock_ser.read_response.side_effect = [
-            "12.5,25.3,1543.7,1,0,1,78.2,65.4",
+            struct.pack('<ffffBBBBBH', 
+                                25.3,  # speed
+                                5.2,   # airspeed
+                                78.2,  # engineTemp
+                                65.4,  # radTemp
+                                0, 1, 0, 1, 0,  # digital channels
+                                100),  # analog channel
             "",
             KeyboardInterrupt() 
         ]
@@ -147,7 +154,14 @@ async def test_enable_remote_allows_database(mock_dependencies):
     
     # Provide enough data points to trigger DB insert (20+)
     mock_dependencies['serial'].read_response.side_effect = (
-        ["12.5,25.3,1543.7,1,0,1,78.2,65.4", ""] * 25 + [KeyboardInterrupt()]
+        [struct.pack('<ffffBBBBBH', 
+                                25.3,  # speed
+                                5.2,   # airspeed
+                                78.2,  # engineTemp
+                                65.4,  # radTemp
+                                0, 1, 0, 1, 0,  # digital channels
+                                100),  # analog channel
+        ""] * 25 + [KeyboardInterrupt()]
     )
     
     try:
