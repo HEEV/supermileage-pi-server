@@ -1,7 +1,5 @@
 import asyncio
 import datetime
-import math
-from dataclasses import dataclass
 from os import getenv
 from psycopg2 import DatabaseError
 from serial import serialutil
