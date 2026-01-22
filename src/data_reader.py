@@ -32,9 +32,9 @@ class DataReader:
 
         # Handle the hardcoded sensors first
         sensor_data["speed"] = round(unpacked_data[0], 2)
-        sensor_data["airspeed"] = unpacked_data[1]
-        sensor_data["engine_temp"] = unpacked_data[2]
-        sensor_data["rad_temp"] = unpacked_data[3]
+        sensor_data["airspeed"] = round(unpacked_data[1], 2)
+        sensor_data["engine_temp"] = round(unpacked_data[2], 2)
+        sensor_data["rad_temp"] = round(unpacked_data[3], 2)
         
         # Handle configuration-defined sensor channels
         cars = self._config.config
@@ -93,7 +93,7 @@ class DataReader:
             self._distance_traveled += speedFtms * delta
         self._last_update = timestamp
 
-        data["distance_traveled"] = self._distance_traveled
+        data["distance_traveled"] = round(self._distance_traveled, 2)
         data["time"] = timestamp
         return data
     

@@ -16,4 +16,4 @@ def test_create_serial_conn_while_testing():
     ser = main.create_serial_conn()
     assert ser is not None
     assert ser.read_response() is not None
-    assert ser.is_open() == True
+    assert ser.is_open()

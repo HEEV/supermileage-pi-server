@@ -72,11 +72,11 @@ def create_serial_conn() -> SmSerial | None:
             arduino_connected = True
         except serialutil.SerialException as e:
             if "PermissionError" in str(e):
-                print(f'Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds...')
+                print('Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds...')
             else:
                 print(f'Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {e}')
             sleep(3)
-        except:
+        except Exception:
             print("Unknown error occurred, retrying in 3 seconds...")
             sleep(3)
     return ser
@@ -90,7 +90,7 @@ async def db_conn_init():
                                      user=getenv('DB_USER'),
                                      password=getenv('DB_PASSWORD'),
                                      port=getenv('DB_PORT'))
-    except:
+    except Exception:
         conn = None
     return conn
 
@@ -100,7 +100,7 @@ async def main():
     DISABLE_REMOTE = flags['DISABLE_REMOTE']
     DISABLE_LOCAL = flags['DISABLE_LOCAL']
     DISABLE_DISPLAY = flags['DISABLE_DISPLAY']
-    TESTING = flags['TESTING']
+    
     PACKET_SIZE = int(getenv('DATA_PACKET_SIZE')) if getenv('DATA_PACKET_SIZE') else 23
     print("Initializing Server...")
     datapoint_count = 0
@@ -140,7 +140,7 @@ async def main():
                         last_line = next_line
                         next_line = ser.read_response(PACKET_SIZE)
                 except serialutil.SerialException:
-                    print(f'error reading serial, check Arduino connection')
+                    print('error reading serial, check Arduino connection')
                     ser = create_serial_conn()
                 except Exception as e:
                     print(f'Unknown error reading from serial: {e}')
@@ -171,7 +171,7 @@ async def main():
                         db_live = False
                         conn = None
                     except (TimeoutError, asyncio.exceptions.CancelledError):
-                        print(f'Timeout error inserting into database')
+                        print('Timeout error inserting into database')
                         db_live = False
                         conn = None
 
@@ -187,9 +187,9 @@ async def main():
                             csv_writer = writer(file)
                             data_list = [ data[key] for key in data ]
                             csv_writer.writerow(data_list)
-                    except:
+                    except Exception:
                         print("Error writing to CSV")
-            except KeyboardInterrupt as e:
+            except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()
                 await conn.close()

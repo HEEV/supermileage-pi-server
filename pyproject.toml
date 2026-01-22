@@ -3,7 +3,7 @@ name = "supermileage-pi-server"
 version = "0.1.0"
 description = "Raspberry Pi server for supermileage vehicles"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 dependencies = [
     "aiohttp>=3.10.11",
     "asyncpg>=0.30.0",
@@ -23,7 +23,7 @@ dev = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py312']
 
 [tool.mypy]
 python_version = "3.8"
