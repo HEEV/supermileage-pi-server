@@ -1,4 +1,3 @@
-import os
 from unittest import mock
 
 import main
@@ -11,8 +10,7 @@ def test_new_race_created_resets_globals():
         main.new_race_created()
         mock_reset.assert_called_once()
 
-def test_create_serial_conn_while_testing():
-    os.environ['TESTING'] = 'True'
+def test_create_serial_conn_while_testing(env):
     ser = main.create_serial_conn()
     assert ser is not None
     assert ser.read_response() is not None

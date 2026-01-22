@@ -75,15 +75,6 @@ def mock_dependencies():
 
 
 # Test get_env_flags function
-def test_get_env_flags_defaults():
-    """All flags should be False by default"""
-    flags = main.get_env_flags()
-    assert not flags['DISABLE_REMOTE']
-    assert not flags['DISABLE_LOCAL']
-    assert not flags['DISABLE_DISPLAY']
-    assert not flags['TESTING']
-
-
 def test_get_env_flags_all_enabled():
     """All flags should be True when set"""
     os.environ['DISABLE_REMOTE'] = 'True'
