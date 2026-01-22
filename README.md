@@ -4,7 +4,7 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.12 or higher
 - `pip`
 
 ## Environment
@@ -26,19 +26,29 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 ## Installation
 
 1. Clone the repository:
-    ```bash
-    git clone https://github.com/HEEV/supermileage-pi-server.git
-    cd supermileage-pi-server
-    ```
+```bash
+git clone https://github.com/HEEV/supermileage-pi-server.git
+cd supermileage-pi-server
+```
 
-2. Install `uv`:
-    ```bash
-    pip install uv
-    ```
+2. Install `uv` and `Ruff` if you do not already have them.
+
+`uv` is our package manager for the project.
+
+```bash
+pip install uv
+```
+
+`Ruff` is the formatter/linter of choice.
+
+```bash
+pip install ruff
+```
 
 ## Usage
 
 To build the dependencies needed for this repository, run the following command:
+
 ```bash
 # normal
 uv sync
@@ -48,14 +58,19 @@ uv sync --dev
 ```
 
 To run the server within the uv environment, execute the following command:
+
 ```bash
-uv run main.py
+uv run src/main.py
 ```
 
-To run the test suite [with or without the verbose option], simply execute the following:
+To run the test suite, simply execute the following:
+
 ```bash
 uv run pytest
+ruff check
 ```
+
+These commands will ensure that your code does not have any regressions in functionality and still meet general formatting guidelines.
 
 Please refer to the [uv documentation](https://docs.astral.sh/uv/getting-started/) for more details on adding packages, removing packages, and more.
 

@@ -1,5 +1,5 @@
 import pytest
-from configuration_generator import ConfigurationGenerator, Car, Metadata, Sensor
+from configuration_generator import ConfigurationGenerator, Car, ConfigurationGeneratorError, Metadata, Sensor
 
 CONFIG_LIST = [
     Car(
@@ -74,13 +74,13 @@ def test_get_sensors_no_active_car():
     for car in config_gen.config:
         car.active = False
     
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationGeneratorError):
         config_gen.get_sensors()
 
 def test_get_sensors_nonexistent_car():
     """Test error when requesting nonexistent car"""
     config_gen = ConfigurationGenerator("test/testfiles/car_config.json")
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationGeneratorError):
         config_gen.get_sensors("nonexistent_car")
 
 def test_get_metadata():
@@ -103,13 +103,13 @@ def test_get_metadata_no_active_car():
     for car in config_gen.config:
         car.active = False
     
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationGeneratorError):
         config_gen.get_metadata()
 
 def test_get_metadata_nonexistent_car():
     """Test error when requesting metadata from nonexistent car"""
     config_gen = ConfigurationGenerator("test/testfiles/car_config.json")
-    with pytest.raises(ValueError):
+    with pytest.raises(ConfigurationGeneratorError):
         config_gen.get_metadata("nonexistent_car")
 
 def test_sensor_zero_conversion_factor():

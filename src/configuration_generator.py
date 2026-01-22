@@ -61,12 +61,17 @@ class Car:
     sensors: dict[str, Sensor]
     metadata: Metadata
 
+class ConfigurationGeneratorError(Exception):
+    """ConfigurationGenerator error class"""
+
 
 class ConfigurationGenerator:
     """Class to generate configuration from a JSON file"""
 
     def __init__(self, config_file_path: str | None = None):
         self._config_file_path = getenv('CONFIG_FILE_PATH') if config_file_path is None else config_file_path
+        if self._config_file_path is None:
+            raise ConfigurationGeneratorError("CONFIG_FILE_PATH must be provided in the environment or passed to the generator.")
         self.config: List[Car] = []
         self._load_config()
 
@@ -76,7 +81,7 @@ class ConfigurationGenerator:
             config: dict = json.load(config_file)
             cars: dict = config.get("cars", None)
             if not cars:
-                raise ValueError('No cars defined in configuration file')
+                raise ConfigurationGeneratorError('No cars defined in configuration file')
             
             # Loop through each car and populate configuration
             for car_name, car in cars.items():
@@ -85,14 +90,14 @@ class ConfigurationGenerator:
                 # Load sensors
                 sensors = car.get("sensors", None)
                 if sensors is None:
-                    raise ValueError(f'Sensors not defined for car: {car_name}')
+                    raise ConfigurationGeneratorError(f'Sensors not defined for car: {car_name}')
                 for sensor_name, sensor in sensors.items():
                     sensor_list[sensor_name] = Sensor.from_dict(sensor)
                 
                 # Load metadata
                 metadata: dict = car.get("metadata", None)
                 if metadata is None:
-                    raise ValueError(f'Metadata not defined for car: {car_name}')
+                    raise ConfigurationGeneratorError(f'Metadata not defined for car: {car_name}')
                 metadata_obj = Metadata.from_dict(metadata)
 
                 # Create Car object
@@ -116,7 +121,7 @@ class ConfigurationGenerator:
         for car in self.config:
             if car.name == car_name:
                 return car.sensors
-        raise ValueError(f'Car not found: {car_name}')
+        raise ConfigurationGeneratorError(f'Car not found: {car_name}')
     
     def get_metadata(self, car_name = None) -> Metadata:
         """Get the metadata for a specified car"""
@@ -129,4 +134,4 @@ class ConfigurationGenerator:
         for car in self.config:
             if car.name == car_name:
                 return car.metadata
-        raise ValueError(f'Car not found: {car_name}')
+        raise ConfigurationGeneratorError(f'Car not found: {car_name}')

@@ -69,6 +69,7 @@ async def db_conn_init():
     return conn
 
 async def main():
+    load_dotenv()
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
     data_reader = DataReader(config_gen)
@@ -83,7 +84,6 @@ async def main():
         csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
 
     # Load environment variables from .env file
-    load_dotenv()
     flags = get_env_flags()
     DISABLE_REMOTE = flags['DISABLE_REMOTE']
     DISABLE_LOCAL = flags['DISABLE_LOCAL']
