@@ -18,39 +18,13 @@ import nest_asyncio
 
 nest_asyncio.apply()
 
-# Load environment variables from .env file
-load_dotenv()
-
-# Automatically generate configuration from a JSON file defined in the environment.
-config_gen = ConfigurationGenerator()
-
-data_reader = DataReader(config_gen)
-
 # initialize the local python server
 localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 app = web.Application()
 localDisplaySio.attach(app)
 
-# Create CSV for this session
-data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
-with open(data_file_name, 'w') as file:
-    csv_writer = writer(file)
-    hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
-    dynamic_sensors = [sensor.name for _, sensor in config_gen.get_sensors().items()]
-    derived_sensors = ["distance_traveled", "time"]
-    csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
-
 distance_traveled = 0
 last_update = 0
-# reset base variables when new race is requested
-def new_race_created():
-    data_reader.reset_distance()
-
-# Send request for a new race to remote server, not used?
-@localDisplaySio.event
-async def request_new_race(sid):
-    print("requesting new race...")
-    #sio_client.emit('request_new_race')
 
 # Environment variable flags to enable/disable data sending
 def get_env_flags():
@@ -95,7 +69,21 @@ async def db_conn_init():
     return conn
 
 async def main():
+    # Automatically generate configuration from a JSON file defined in the environment.
+    config_gen = ConfigurationGenerator()
+    data_reader = DataReader(config_gen)
 
+    # Create CSV for this session
+    data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
+    with open(data_file_name, 'w') as file:
+        csv_writer = writer(file)
+        hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
+        dynamic_sensors = [sensor.name for _, sensor in config_gen.get_sensors().items()]
+        derived_sensors = ["distance_traveled", "time"]
+        csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
+
+    # Load environment variables from .env file
+    load_dotenv()
     flags = get_env_flags()
     DISABLE_REMOTE = flags['DISABLE_REMOTE']
     DISABLE_LOCAL = flags['DISABLE_LOCAL']

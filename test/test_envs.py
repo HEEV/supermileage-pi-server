@@ -37,11 +37,13 @@ def reset_env():
 @pytest.fixture
 def mock_dependencies():
     """Mock all external dependencies for main loop tests"""
+    mock_file = mock_open()
+    
     with patch('main.web.AppRunner') as mock_runner, \
          patch('main.web.TCPSite') as mock_site, \
          patch('main.asyncpg.connect') as mock_db, \
          patch('main.create_serial_conn') as mock_serial, \
-         patch('builtins.open', mock_open()):
+         patch('main.open', mock_file):
         
         # Setup serial mock
         mock_ser = MagicMock()
@@ -70,17 +72,17 @@ def mock_dependencies():
             'serial': mock_ser,
             'db': mock_conn,
             'runner': mock_runner,
-            'site': mock_site
+            'site': mock_site,
+            'file_mock': mock_file
         }
 
 
 # Test get_env_flags function
-def test_get_env_flags_all_enabled():
+def test_get_env_flags_all_enabled(default_env):
     """All flags should be True when set"""
     os.environ['DISABLE_REMOTE'] = 'True'
     os.environ['DISABLE_LOCAL'] = 'True'
     os.environ['DISABLE_DISPLAY'] = 'True'
-    os.environ['TESTING'] = 'True'
     
     flags = main.get_env_flags()
     assert flags['DISABLE_REMOTE']
@@ -91,10 +93,9 @@ def test_get_env_flags_all_enabled():
 
 # Test DISABLE_DISPLAY flag
 @pytest.mark.asyncio
-async def test_disable_display_blocks_socket_emit(mock_dependencies):
+async def test_disable_display_blocks_socket_emit(mock_dependencies, default_env):
     """DISABLE_DISPLAY should prevent socket emissions"""
     os.environ['DISABLE_DISPLAY'] = 'True'
-    os.environ['TESTING'] = 'True'
     
     with patch('main.localDisplaySio.emit') as mock_emit:
         try:
@@ -106,10 +107,8 @@ async def test_disable_display_blocks_socket_emit(mock_dependencies):
 
 
 @pytest.mark.asyncio
-async def test_enable_display_allows_socket_emit(mock_dependencies):
+async def test_enable_display_allows_socket_emit(mock_dependencies, default_env):
     """Socket emissions should work when DISABLE_DISPLAY is False"""
-    os.environ['TESTING'] = 'True'
-    
     with patch('main.localDisplaySio.emit') as mock_emit:
         try:
             await main.main()
@@ -121,14 +120,20 @@ async def test_enable_display_allows_socket_emit(mock_dependencies):
 
 # Test DISABLE_REMOTE flag
 @pytest.mark.asyncio
-async def test_disable_remote_blocks_database(mock_dependencies):
+async def test_disable_remote_blocks_database(mock_dependencies, default_env):
     """DISABLE_REMOTE should prevent database insertions"""
     os.environ['DISABLE_REMOTE'] = 'True'
-    os.environ['TESTING'] = 'True'
     
     # Provide enough data points to trigger DB insert (20+)
     mock_dependencies['serial'].read_response.side_effect = (
-        ["12.5,25.3,1543.7,1,0,1,78.2,65.4", ""] * 25 + [KeyboardInterrupt()]
+        [struct.pack('<ffffBBBBBH', 
+                                25.3,  # speed
+                                5.2,   # airspeed
+                                78.2,  # engineTemp
+                                65.4,  # radTemp
+                                0, 1, 0, 1, 0,  # digital channels
+                                100),  # analog channel
+        ""] * 25 + [KeyboardInterrupt()]
     )
     
     try:
@@ -139,10 +144,8 @@ async def test_disable_remote_blocks_database(mock_dependencies):
     mock_dependencies['db'].execute.assert_not_called()
 
 @pytest.mark.asyncio
-async def test_enable_remote_allows_database(mock_dependencies):
+async def test_enable_remote_allows_database(mock_dependencies, default_env):
     """Database insertions should work when DISABLE_REMOTE is False"""
-    os.environ['TESTING'] = 'True'
-    
     # Provide enough data points to trigger DB insert (20+)
     mock_dependencies['serial'].read_response.side_effect = (
         [struct.pack('<ffffBBBBBH', 
@@ -165,41 +168,36 @@ async def test_enable_remote_allows_database(mock_dependencies):
 # Test DISABLE_LOCAL flag
 
 @pytest.mark.asyncio
-async def test_disable_local_blocks_csv_write(mock_dependencies):
+async def test_disable_local_blocks_csv_write(mock_dependencies, default_env):
     """DISABLE_LOCAL should prevent CSV file writes in the loop"""
     os.environ['DISABLE_LOCAL'] = 'True'
-    os.environ['TESTING'] = 'True'
     
-    mock_file = mock_open()
-    with patch('builtins.open', mock_file):
-        try:
-            await main.main()
-        except KeyboardInterrupt:
-            pass
-        
-        # Count how many times we opened file in append mode ('a')
-        append_calls = [call for call in mock_file.call_args_list 
-                       if len(call[0]) > 1 and call[0][1] == 'a']
-        
-        # Should not have any append operations when DISABLE_LOCAL is True
-        assert len(append_calls) == 0
+    try:
+        await main.main()
+    except KeyboardInterrupt:
+        pass
+    
+    # Count how many times we opened file in append mode ('a')
+    mock_file = mock_dependencies['file_mock']
+    append_calls = [call for call in mock_file.call_args_list 
+                   if len(call[0]) > 1 and call[0][1] == 'a']
+    
+    # Should not have any append operations when DISABLE_LOCAL is True
+    assert len(append_calls) == 0
 
 
 @pytest.mark.asyncio
-async def test_enable_local_allows_csv_write(mock_dependencies):
+async def test_enable_local_allows_csv_write(mock_dependencies, default_env):
     """CSV writing should work when DISABLE_LOCAL is False"""
-    os.environ['TESTING'] = 'True'
+    try:
+        await main.main()
+    except KeyboardInterrupt:
+        pass
     
-    mock_file = mock_open()
-    with patch('builtins.open', mock_file):
-        try:
-            await main.main()
-        except KeyboardInterrupt:
-            pass
-        
-        # Count how many times we opened file in append mode ('a')
-        append_calls = [call for call in mock_file.call_args_list 
-                       if len(call[0]) > 1 and call[0][1] == 'a']
-        
-        # Should have at least one append operation when DISABLE_LOCAL is False
-        assert len(append_calls) > 0
+    # Count how many times we opened file in append mode ('a')
+    mock_file = mock_dependencies['file_mock']
+    append_calls = [call for call in mock_file.call_args_list 
+                   if len(call[0]) > 1 and call[0][1] == 'a']
+    
+    # Should have at least one append operation when DISABLE_LOCAL is False
+    assert len(append_calls) > 0
