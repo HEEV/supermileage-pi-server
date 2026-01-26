@@ -61,7 +61,7 @@ class SmSerial:
                 self._test_data_sent = True
                 response = struct.pack('<ffffBBBBBH', 
                                 25.3,  # speed
-                                5.2,   # airspeed
+                                5.1,   # airspeed
                                 78.2,  # engineTemp
                                 65.4,  # radTemp
                                 0, 1, 0, 1, 0,  # digital channels

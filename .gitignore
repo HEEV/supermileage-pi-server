@@ -2,10 +2,12 @@
 .idea/
 .vscode/
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 __pycache__/
 *.pyc
+junit
 
 # Local environment variables and data directory
 *venv
