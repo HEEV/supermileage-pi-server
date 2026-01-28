@@ -4,7 +4,7 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 ## Prerequisites
 
-- Python 3.12 or higher
+- Python 3.11 or higher
 - `pip`
 
 ## Environment

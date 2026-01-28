@@ -1,187 +1,89 @@
 import asyncio
-import datetime
 from os import getenv
-from psycopg2 import DatabaseError
-from serial import serialutil
+from time import sleep
+
+import nest_asyncio  # async in python is dumb idek what this does but stackoverflow said to do it and now it works
 import socketio
 from aiohttp import web
-from csv import writer
-from time import sleep
-import asyncpg
-from data_reader import DataReader
-from sm_serial import SmSerial
-from configuration_generator import ConfigurationGenerator
 from dotenv import load_dotenv
 
-# async in python is dumb idek what this does but stackoverflow said to do it and now it works
-import nest_asyncio
+from cache import CacheError, CarCache
+from configuration_generator import ConfigurationGenerator
+from data_reader import DataReader
+from sm_serial import SmSerial, SmSerialError
+from utils import get_env_flags
 
 nest_asyncio.apply()
 
 # initialize the local python server
-localDisplaySio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
+localDisplaySio = socketio.AsyncServer(async_mode="aiohttp", cors_allowed_origins="*")
 app = web.Application()
 localDisplaySio.attach(app)
 
-distance_traveled = 0
-last_update = 0
-
-# Environment variable flags to enable/disable data sending
-def get_env_flags():
-    return {
-        'DISABLE_REMOTE': getenv('DISABLE_REMOTE', 'False') == 'True',
-        'DISABLE_LOCAL': getenv('DISABLE_LOCAL', 'False') == 'True',
-        'DISABLE_DISPLAY': getenv('DISABLE_DISPLAY', 'False') == 'True', 
-        'TESTING': getenv('TESTING', 'False') == 'True'
-    }
-
-# create a serial connection to the arduino
-def create_serial_conn() -> SmSerial | None:
-    ser = None
-    arduino_connected = False
-    while not arduino_connected:
-        try:
-            #port='COM6' #for testing on Windows only
-            ser = SmSerial(timeout=0.025)
-            arduino_connected = True
-        except serialutil.SerialException as e:
-            if "PermissionError" in str(e):
-                print('Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds...')
-            else:
-                print(f'Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {e}')
-            sleep(3)
-        except Exception:
-            print("Unknown error occurred, retrying in 3 seconds...")
-            sleep(3)
-    return ser
-
-# Database init
-async def db_conn_init():
-    conn = None
-    try:
-        conn = await asyncpg.connect(database=getenv('DB'),
-                                     host=getenv('DB_HOST'),
-                                     user=getenv('DB_USER'),
-                                     password=getenv('DB_PASSWORD'),
-                                     port=getenv('DB_PORT'))
-    except Exception:
-        conn = None
-    return conn
 
 async def main():
+    print("Initializing Server...")
     load_dotenv()
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
     data_reader = DataReader(config_gen)
 
     # Create CSV for this session
-    data_file_name = datetime.datetime.now().strftime('Data/%Y-%m-%d_%H-%M-%S_car_data.csv')
-    with open(data_file_name, 'w') as file:
-        csv_writer = writer(file)
-        hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
-        dynamic_sensors = [sensor.name for _, sensor in config_gen.get_sensors().items()]
-        derived_sensors = ["distance_traveled", "time"]
-        csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
+    car_cache = CarCache(config_gen)
+
+    # port='COM6' #for testing on Windows only
+    ser = SmSerial(timeout=0.025)
 
     # Load environment variables from .env file
     flags = get_env_flags()
-    DISABLE_REMOTE = flags['DISABLE_REMOTE']
-    DISABLE_LOCAL = flags['DISABLE_LOCAL']
-    DISABLE_DISPLAY = flags['DISABLE_DISPLAY']
-    
-    PACKET_SIZE = int(getenv('DATA_PACKET_SIZE')) if getenv('DATA_PACKET_SIZE') else 23
-    print("Initializing Server...")
-    datapoint_count = 0
-    db_live = False
+    DISABLE_REMOTE = flags["DISABLE_REMOTE"]
+    DISABLE_LOCAL = flags["DISABLE_LOCAL"]
+    DISABLE_DISPLAY = flags["DISABLE_DISPLAY"]
 
-    # arduino serial connection initialization
-    ser = create_serial_conn() 
-
-    # initialize server object for remote connection to database
-    conn = await db_conn_init()
+    PACKET_SIZE = int(getenv("DATA_PACKET_SIZE")) if getenv("DATA_PACKET_SIZE") else 23
 
     # Spinning up the local python server
     runner = web.AppRunner(app)
-
     await runner.setup()
-    await web.TCPSite(runner, '0.0.0.0', 8080).start()
+    await web.TCPSite(runner, "0.0.0.0", 8080).start()
 
     # Main server loop
-    #sleep(3)
-    if ser is not None:
-        while True:
-            # Re-instantiate database if it died at some point
-            if not db_live and not DISABLE_REMOTE:
-                print("Database is down, attempting reconnect...")
-                conn = await db_conn_init()
-                if conn is None:
-                    db_live = False
-                else:
-                    db_live = True
+    while True:
+        if ser.is_open():
+            # Re-instantiate remote connection if it died at some point
+            if not DISABLE_REMOTE:
+                pass
 
             try:
                 # read serial data from arduino
-                try:
-                    last_line = ser.read_response(PACKET_SIZE)
-                    next_line = ser.read_response(PACKET_SIZE)
-                    while next_line != '':
-                        last_line = next_line
-                        next_line = ser.read_response(PACKET_SIZE)
-                except serialutil.SerialException:
-                    print('error reading serial, check Arduino connection')
-                    ser = create_serial_conn()
-                except Exception as e:
-                    print(f'Unknown error reading from serial: {e}')
-                    continue
+                last_line = ser.read_response(PACKET_SIZE)
 
                 # parse the arduino data, send data to local (sio) and remote (cursor)
-                try:
-                    data = data_reader.read_sensor_data(last_line)
-                    print(data)
-                    # Broadcast to connected clients
-                    if not DISABLE_DISPLAY:
-                        await localDisplaySio.emit('new_data', data)
-                        # TODO: Create way to identify which car we are using
-                        # TODO: populate this based on config available sensors, not hardcoded
-                        # insert values into database, but only every 20th datapoint
-                        # This prevents over-saturation of the database connection
-                    try:
-                        datapoint_count += 1
-                        if datapoint_count >= 20 and db_live and not DISABLE_REMOTE:
-                            await asyncio.wait_for(
-                                conn.execute(
-                                    f'insert into car_acquisition.car_data (car_id, time, voltage, speed, engine_temp, rad_temp, distance_traveled) VALUES ({0}, {data["time"]}, {data["voltage"]}, {data["speed"]}, {data["engine_temp"]}, {data["rad_temp"]}, {data["distance_traveled"]})'),
-                                timeout=1.0  # Set your desired timeout in seconds
-                            )
-                            datapoint_count = 0
-                    except DatabaseError as e:
-                        print(f'Error inserting into database, rolling back query: {e}')
-                        db_live = False
-                        conn = None
-                    except (TimeoutError, asyncio.exceptions.CancelledError):
-                        print('Timeout error inserting into database')
-                        db_live = False
-                        conn = None
-
-                    await asyncio.sleep(.05)
-                except Exception as e:
-                    print(f'Exception while parsing/sending data: {last_line}, {e}')
-                    pass
+                data = data_reader.parse_sensor_data(last_line)
+                print(data)
+                # Broadcast to connected clients
+                if not DISABLE_DISPLAY and data:
+                    await localDisplaySio.emit("new_data", data)
+                    # TODO: Create way to identify which car we are using
+                await asyncio.sleep(0.05)
 
                 # Write data locally to a CSV file
-                if not DISABLE_LOCAL:
-                    try:
-                        with open(data_file_name, 'a') as file:
-                            csv_writer = writer(file)
-                            data_list = [ data[key] for key in data ]
-                            csv_writer.writerow(data_list)
-                    except Exception:
-                        print("Error writing to CSV")
+                if not DISABLE_LOCAL and data:
+                    car_cache.add_record(data)
+            except SmSerialError as exc:
+                print(exc)
+                ser.reconnect()
+            except CacheError:
+                print("Error writing to local cache.")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()
-                await conn.close()
                 break
+        else:
+            # Serial is not open, give time to open
+            ser.reconnect()
+            sleep(3)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
