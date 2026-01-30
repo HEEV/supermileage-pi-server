@@ -7,9 +7,9 @@ import socketio
 from aiohttp import web
 from dotenv import load_dotenv
 
-from cache import CacheError, CarCache
 from configuration_generator import ConfigurationGenerator
 from data_reader import DataReader
+from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
 from sm_serial import SmSerial, SmSerialError
 from utils import get_env_flags
 
@@ -29,9 +29,11 @@ async def main():
     data_reader = DataReader(config_gen)
 
     # Create CSV for this session
-    car_cache = CarCache(config_gen)
+    car_cache = LocalTransmitter(config_gen.get_sensors())
+    car_remote = RemoteTransmitter()
 
     # port='COM6' #for testing on Windows only
+    # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
     ser = SmSerial(timeout=0.025)
 
     # Load environment variables from .env file
@@ -50,10 +52,6 @@ async def main():
     # Main server loop
     while True:
         if ser.is_open():
-            # Re-instantiate remote connection if it died at some point
-            if not DISABLE_REMOTE:
-                pass
-
             try:
                 # read serial data from arduino
                 last_line = ser.read_response(PACKET_SIZE)
@@ -67,13 +65,16 @@ async def main():
                     # TODO: Create way to identify which car we are using
                 await asyncio.sleep(0.05)
 
+                # Transmit to the cloud
+                if not DISABLE_REMOTE and data:
+                    car_remote.handle_record(data)
+
                 # Write data locally to a CSV file
                 if not DISABLE_LOCAL and data:
-                    car_cache.add_record(data)
+                    car_cache.handle_record(data)
             except SmSerialError as exc:
                 print(exc)
-                ser.reconnect()
-            except CacheError:
+            except TransmitterError:
                 print("Error writing to local cache.")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")

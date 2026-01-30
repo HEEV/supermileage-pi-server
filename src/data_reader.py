@@ -6,6 +6,13 @@ from configuration_generator import ConfigurationGenerator
 
 
 class DataReader:
+    """
+    Processes Arduino data packets and outputs data structures based on the car configuration.
+
+    Args:
+        config(ConfigurationGenerator): the current car sensor configuration
+    """
+
     def __init__(self, config: ConfigurationGenerator):
         self._config = config
         self._packet_format = "<ffffBBBBBH"

@@ -6,7 +6,16 @@ from typing import List, Literal
 
 @dataclass
 class Sensor:
-    """Class representing a sensor configuration"""
+    """Class representing a sensor configuration
+
+    Attributes:
+        name(str):
+        unit(str | None):
+        conversion_factor(float | None):
+        input_type(Literal["analog", "digital"]):
+        limit_min(float | None):
+        limit_max(float | None):
+    """
 
     name: str
     unit: str | None
@@ -44,7 +53,13 @@ class Sensor:
 
 @dataclass
 class Metadata:
-    """Class representing metadata for a car"""
+    """Class representing metadata for a car
+
+    Attributes:
+        weight(int | None):
+        power_plant(Literal["gasoline", "electric", "hydrogen"]):
+        drag_coefficient(float | None):
+    """
 
     weight: int | None = None
     power_plant: Literal["gasoline", "electric", "hydrogen"] | None = None
@@ -62,7 +77,15 @@ class Metadata:
 
 @dataclass
 class Car:
-    """Class representing a car configuration"""
+    """Class representing a car configuration
+
+    Attributes:
+        name(str): name of the car
+        active(bool): True if the car is the active configuration
+        theme(str): the name of the color profile for the display
+        sensors(dict[str, Sensor]): dictionary of sensors for the car
+        metadata(Metadata): collection of misc. metadata for the car
+    """
 
     name: str
     active: bool
@@ -76,7 +99,19 @@ class ConfigurationGeneratorError(Exception):
 
 
 class ConfigurationGenerator:
-    """Class to generate configuration from a JSON file"""
+    """
+    Class to generate configuration from a JSON file.
+
+    This information is parsed based on the JSON schema defined in the team documentation.
+    The data coming from the Arduino cannot be properly parsed without this class being properly
+    initialized with the JSON config file.
+
+    The path to this file is required and can be set in the arguments, or in the environment
+    variables.
+
+    Attributes:
+        config (List[Car]): List of Car configurations parsed from the configuration file.
+    """
 
     def __init__(self, config_file_path: str | None = None):
         self._config_file_path = (
@@ -130,8 +165,19 @@ class ConfigurationGenerator:
                 )
                 self.config.append(car_obj)
 
-    def get_sensors(self, car_name=None) -> dict[str, Sensor]:
-        """Get the sensor configuration for a specified car. This does not include any hardcoded sensors."""
+    def get_sensors(self, car_name: str | None = None) -> dict[str, Sensor]:
+        """
+        Get the sensor configuration for a specified car. This does not include any hardcoded sensors.
+
+        Args:
+            car_name(str | None): Optional, name of the car to get information for
+
+        Returns:
+            (dict[str, Sensor]): a dictionary of sensors for the requested car
+
+        Raises:
+            ConfigurationGeneratorError: If the requested car is not found in the configuration.
+        """
         # Return active car if no name provided
         if car_name is None:
             for car in self.config:
@@ -143,8 +189,19 @@ class ConfigurationGenerator:
                 return car.sensors
         raise ConfigurationGeneratorError(f"Car not found: {car_name}")
 
-    def get_metadata(self, car_name=None) -> Metadata:
-        """Get the metadata for a specified car"""
+    def get_metadata(self, car_name: str | None = None) -> Metadata:
+        """
+        Get the metadata for a specified car
+
+        Args:
+            car_name(str | None): Optional, name of the car to get information for
+
+        Returns:
+            Metadata: a collection of the metadata for the requested car
+
+        Raises:
+            ConfigurationGeneratorError: If the requested car is not found in the configuration.
+        """
         # Return active car if no name provided
         if car_name is None:
             for car in self.config:

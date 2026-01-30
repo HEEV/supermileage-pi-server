@@ -11,17 +11,18 @@ class SmSerialError(Exception):
 
 
 class SmSerial:
+    """
+    Encapsulates and maintains a serial connection with an Arduino.
+
+    Args:
+        port: Serial port name (e.g., 'COM6' or '/dev/ttyUSB0')
+        baudrate: Communication speed (default: 9600)
+        timeout: Read timeout in seconds (default: 1)
+    """
+
     def __init__(
         self, port: str | None = None, baudrate: int = 9600, timeout: float = 1
     ):
-        """
-        Initialize serial connection to Arduino.
-
-        Args:
-            port: Serial port name (e.g., 'COM6' or '/dev/ttyUSB0')
-            baudrate: Communication speed (default: 9600)
-            timeout: Read timeout in seconds (default: 1)
-        """
         self._port: str = ""
         self._baudrate: int = baudrate
         self._timeout: float = timeout
@@ -50,26 +51,37 @@ class SmSerial:
                 print(
                     f"Serial connection established on {self._port} at {self._baudrate} baud"
                 )
-            except serial.SerialException as e:
-                print(f"Failed to open serial port {port}: {e}")
-                if "PermissionError" in str(e):
+            except serial.SerialException as exc:
+                print(f"Failed to open serial port {port}: {exc}")
+                if "PermissionError" in str(exc):
                     raise SmSerialError(
                         "Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds..."
-                    )
+                    ) from exc
                 else:
                     raise SmSerialError(
-                        f"Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {e}"
-                    )
+                        f"Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {exc}"
+                    ) from exc
+
+    def reconnect(self):
+        """
+        Reinitialize the serial connection if it is not open currently.
+        """
+        if not self.is_open():
+            try:
+                self._ser.open()
+                print(f"Connection to {self._port} re-established.")
+            except serial.SerialException as exc:
+                print(f"Failed to reconnect to serial. {exc}")
 
     def read_response(self, size: int = 32) -> bytes:
         """
-        Read a line of data from the Arduino.
+        Read a packet of data from the Arduino.
 
         Args:
-            size: Number of bytes to read from the serial port.
+            size(int): Number of bytes to read from the serial port.
 
         Returns:
-            Decoded string response from Arduino
+            bytes: data packet from Arduino
         """
         response = b""
         # Mock a response if in testing mode
@@ -103,10 +115,10 @@ class SmSerial:
                 last_line = next_line
                 next_line = self._ser.read(size)
             return last_line
-        except serial.SerialException as e:
+        except serial.SerialException as exc:
             raise SmSerialError(
-                f"Error reading from serial, most likely a disconnect: {e}"
-            )
+                "Error reading from serial, most likely a disconnect."
+            ) from exc
 
     def is_open(self) -> bool:
         """Check if the serial connection is open."""
