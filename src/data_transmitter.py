@@ -35,18 +35,19 @@ class LocalTransmitter(DataTransmitter):
 
     Args:
         car_sensors (dict[str, Sensor])): the set of sensors for the car being written to
+        data_dir (str, optional): the directory to write the CSV file to. Defaults to "Data".
     """
 
-    def __init__(self, car_sensors: dict[str, Sensor]):
-        self._data_file_name = datetime.datetime.now().strftime(
-            "Data/%Y-%m-%d_%H-%M-%S_car_data.csv"
+    def __init__(self, car_sensors: dict[str, Sensor], data_dir: str = "Data"):
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self._data_file_name = f"{data_dir}/{timestamp}_car_data.csv"
+
+        hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
+        dynamic_sensors = [sensor.name for _, sensor in car_sensors.items()]
+        derived_sensors = ["distance_traveled", "time"]
+        self._write_to_csv(
+            self._data_file_name, hardcoded_sensors + dynamic_sensors + derived_sensors
         )
-        with open(self._data_file_name, "w") as file:
-            csv_writer = writer(file)
-            hardcoded_sensors = ["speed", "airspeed", "engine_temp", "rad_temp"]
-            dynamic_sensors = [sensor.name for _, sensor in car_sensors.items()]
-            derived_sensors = ["distance_traveled", "time"]
-            csv_writer.writerow(hardcoded_sensors + dynamic_sensors + derived_sensors)
 
     def handle_record(self, data: dict):
         """
@@ -59,19 +60,23 @@ class LocalTransmitter(DataTransmitter):
             TransmitterError: If an error occurs while trying to write to the CSV.
                 Errors can be due to OS or data formatting.
         """
-        with open(self._data_file_name, "a") as file:
-            try:
-                csv_writer = writer(file)
-                data_list = [data[key] for key in data]
-                csv_writer.writerow(data_list)
-            except OSError as exc:
-                raise TransmitterError(
-                    f"Problem writing to CSV file, file cannot be opened and/or written: {exc}"
-                ) from exc
-            except (KeyError, TypeError) as exc:
-                raise TransmitterError(
-                    f"Invalid data being written to cache, received: {data}\n{exc}"
-                ) from exc
+        try:
+            data_list = [data[key] for key in data]
+            self._write_to_csv(self._data_file_name, data_list)
+        except OSError as exc:
+            raise TransmitterError(
+                f"Problem writing to CSV file, file cannot be opened and/or written: {exc}"
+            ) from exc
+        except (KeyError, TypeError) as exc:
+            raise TransmitterError(
+                f"Invalid data being written, received: {data}\n{exc}"
+            ) from exc
+
+    def _write_to_csv(self, file_name: str, line: dict):
+        """Helper function to write line to CSV, with error handling"""
+        with open(file_name, "a") as file:
+            csv_writer = writer(file)
+            csv_writer.writerow(line)
 
 
 class RemoteTransmitter(DataTransmitter):
