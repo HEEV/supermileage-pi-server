@@ -9,7 +9,7 @@ class TransmitterError(Exception):
     """Exception for transmitter errors"""
 
 
-class DataTransmitter(ABC):
+class DataTransmitter(ABC):  # pragma: no cover
     """Base class for data transmission"""
 
     def __init__():
@@ -95,4 +95,6 @@ class RemoteTransmitter(DataTransmitter):
         Args:
             data(dict): the data record to be sent
         """
-        print("Warning: handle_record is unimplemented for RemoveTransmitter.")
+        raise NotImplementedError(
+            "RemoteTransmitter.handle_record is not yet implemented."
+        )

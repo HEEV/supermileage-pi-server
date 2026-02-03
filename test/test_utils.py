@@ -1,6 +1,4 @@
-"""Tests for utility functions in src/utils.py"""
-
-from src.utils import get_env_flags
+from utils import get_env_flags
 
 
 def test_get_env_flags(default_env):

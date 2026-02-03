@@ -34,7 +34,7 @@ async def main():
 
     # port='COM6' #for testing on Windows only
     # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
-    ser = SmSerial(timeout=0.025)
+    ser = SmSerial(timeout=0.025, crashloop=True)
 
     # Load environment variables from .env file
     flags = get_env_flags()

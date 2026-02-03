@@ -1,11 +1,9 @@
-"""Tests for data transmitter classes"""
-
 from unittest.mock import patch
 
 import freezegun
 import pytest
 
-from data_transmitter import LocalTransmitter, TransmitterError
+from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
 
 
 @freezegun.freeze_time("2024-01-01 12:00:00")
@@ -44,8 +42,8 @@ class TestLocalTransmitter:
         # Read the file and verify the data was written
         with open(loc_transmitter._data_file_name, "r") as file:
             lines = file.readlines()
-            assert len(lines) == 4  # header + data row
-            assert "30.0,5.0,80.0,70.0,1,12.5,100.0,10.0" in lines[2]
+            assert len(lines) == 2  # header + data row
+            assert "30.0,5.0,80.0,70.0,1,12.5,100.0,10.0" in lines[1]
 
     def test_handle_record_fail_os(self, tmp_path, mock_config_generator):
         """Test that handle_record raises TransmitterError on OS error"""
@@ -78,4 +76,18 @@ class TestLocalTransmitter:
 
 
 class TestRemoteTransmitter:
-    pass
+    """Tests for the RemoteTransmitter class"""
+
+    def test_initialization(self):
+        """Test that RemoteTransmitter initializes without error
+        Note: this test does not test functionality due to lack of implementation.
+        """
+        remote_transmitter = RemoteTransmitter()
+
+        assert remote_transmitter is not None
+
+    def test_handle_record_not_implemented(self):
+        """Test that handle_record reports not implemented"""
+        remote_transmitter = RemoteTransmitter()
+        with pytest.raises(NotImplementedError):
+            remote_transmitter.handle_record({"speed": 30.0})

@@ -1,5 +1,6 @@
 import os
-from unittest.mock import MagicMock
+import struct
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -36,3 +37,28 @@ def mock_config_generator():
         weight=300, power_plant="gasoline", drag_coefficient=0.3
     )
     yield config_gen
+
+
+@pytest.fixture
+def mock_serial():
+    """mock serial.Serial fixture"""
+    with patch("serial.Serial") as mock_ser:
+        # Configure the instance that Serial() returns
+        instance = mock_ser.return_value
+        instance.read.side_effect = [
+            struct.pack(
+                "<ffffBBBBBH",
+                25.3,  # speed
+                5.1,  # airspeed
+                78.2,  # engineTemp
+                65.4,  # radTemp
+                0,
+                1,
+                0,
+                1,
+                0,  # digital channels
+                100,  # analog channel
+            )
+        ] * 2 + [b""]  # empty string to signal end of data
+        instance.is_open = True
+        yield mock_ser

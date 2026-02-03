@@ -95,13 +95,15 @@ def test_parse_sensor_data_valid(data_reader, sample_raw_data):
     assert "time" in result
 
 
-# TODO: Create separate test cases for empty bytes and invalid size
 def test_parse_sensor_data_invalid_size(data_reader):
     """Test error handling for invalid data size"""
     with pytest.raises(ValueError) as excinfo:
         data_reader.parse_sensor_data(b"\x00" * 10)
     assert "Invalid data size" in str(excinfo.value)
 
+
+def test_parse_sensor_data_empty_bytes(data_reader):
+    """Test handling of empty byte input"""
     data = data_reader.parse_sensor_data(b"")
     assert not data
 

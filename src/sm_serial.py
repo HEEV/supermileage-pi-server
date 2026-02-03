@@ -1,6 +1,7 @@
 import glob
 import struct
 from os import getenv
+from time import sleep
 from typing import Optional
 
 import serial
@@ -18,10 +19,15 @@ class SmSerial:
         port: Serial port name (e.g., 'COM6' or '/dev/ttyUSB0')
         baudrate: Communication speed (default: 9600)
         timeout: Read timeout in seconds (default: 1)
+        crashloop: Enable crashloop retry behavior (default: False)
     """
 
     def __init__(
-        self, port: str | None = None, baudrate: int = 9600, timeout: float = 1
+        self,
+        port: str | None = None,
+        baudrate: int = 9600,
+        timeout: float = 1,
+        crashloop: bool = False,
     ):
         self._port: str = ""
         self._baudrate: int = baudrate
@@ -29,6 +35,7 @@ class SmSerial:
         self._testing: bool = getenv("TESTING", "False") == "True"
         self._test_data_sent: bool = False
         self._ser: Optional[serial.Serial] = None
+        self._crashloop: bool = crashloop
 
         # Determine port if not provided
         if port:
@@ -44,6 +51,11 @@ class SmSerial:
         if self._testing:
             print("Running in testing mode, no serial connection will be made.")
         else:
+            self._initialize_connection()
+
+    def _initialize_connection(self):
+        """Initialize the serial connection with optional crashloop retry."""
+        while True:
             try:
                 self._ser = serial.Serial(
                     self._port, self._baudrate, timeout=self._timeout
@@ -51,16 +63,22 @@ class SmSerial:
                 print(
                     f"Serial connection established on {self._port} at {self._baudrate} baud"
                 )
+                break
             except serial.SerialException as exc:
-                print(f"Failed to open serial port {port}: {exc}")
+                print(f"Failed to open serial port {self._port}: {exc}")
+                error_msg = ""
                 if "PermissionError" in str(exc):
-                    raise SmSerialError(
-                        "Permission Error, try unplugging and replugging arduino. Retrying in 3 seconds..."
-                    ) from exc
+                    error_msg = (
+                        "Permission Error, try unplugging and replugging arduino."
+                    )
                 else:
-                    raise SmSerialError(
-                        f"Arduino is missing, please connect the arduino. Retrying in 3 seconds... \n {exc}"
-                    ) from exc
+                    error_msg = f"Arduino is missing, please connect the arduino. {exc}"
+
+                if self._crashloop:
+                    print(f"{error_msg} Retrying in 3 seconds...")
+                    sleep(3)
+                else:
+                    raise SmSerialError(f"{error_msg}") from exc
 
     def reconnect(self):
         """
@@ -111,6 +129,7 @@ class SmSerial:
         try:
             last_line = self._ser.read(size)
             next_line = self._ser.read(size)
+            # read until end of data buffer
             while next_line != b"":
                 last_line = next_line
                 next_line = self._ser.read(size)
