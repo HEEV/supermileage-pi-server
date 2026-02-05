@@ -24,23 +24,23 @@ localDisplaySio.attach(app)
 async def main():
     print("Initializing Server...")
     load_dotenv()
-    # Automatically generate configuration from a JSON file defined in the environment.
-    config_gen = ConfigurationGenerator()
-    data_reader = DataReader(config_gen)
-
-    # Create CSV for this session
-    car_cache = LocalTransmitter(config_gen.get_sensors())
-    car_remote = RemoteTransmitter()
-
-    # port='COM6' #for testing on Windows only
-    # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
-    ser = SmSerial(timeout=0.025, crashloop=True)
-
     # Load environment variables from .env file
     flags = get_env_flags()
     DISABLE_REMOTE = flags["DISABLE_REMOTE"]
     DISABLE_LOCAL = flags["DISABLE_LOCAL"]
     DISABLE_DISPLAY = flags["DISABLE_DISPLAY"]
+
+    # Automatically generate configuration from a JSON file defined in the environment.
+    config_gen = ConfigurationGenerator()
+    data_reader = DataReader(config_gen)
+
+    # Create CSV for this session
+    car_cache = LocalTransmitter(config_gen.get_sensors()) if not DISABLE_LOCAL else None
+    car_remote = RemoteTransmitter()if not DISABLE_REMOTE else None
+
+    # port='COM6' #for testing on Windows only
+    # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
+    ser = SmSerial(timeout=0.025, crashloop=True)
 
     PACKET_SIZE = int(getenv("DATA_PACKET_SIZE")) if getenv("DATA_PACKET_SIZE") else 23
 

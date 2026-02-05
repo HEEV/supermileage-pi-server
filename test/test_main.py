@@ -44,7 +44,7 @@ def mock_dependencies():
         patch("main.web.AppRunner") as mock_runner,
         patch("main.web.TCPSite") as mock_site,
         patch("main.SmSerial") as mock_serial,
-        patch("main.open", mock_open()) as mock_file,
+        patch("data_transmitter.open", mock_open()) as mock_file,
     ):
         # Setup serial mock
         mock_ser = MagicMock()
