@@ -59,19 +59,20 @@ async def main():
                 # parse the arduino data, send data to local (sio) and remote (cursor)
                 data = data_reader.parse_sensor_data(last_line)
                 print(data)
-                # Broadcast to connected clients
-                if not DISABLE_DISPLAY and data:
-                    await localDisplaySio.emit("new_data", data)
-                    # TODO: Create way to identify which car we are using
-                await asyncio.sleep(0.05)
+                if data:
+                    # Broadcast to connected clients
+                    if not DISABLE_DISPLAY:
+                        await localDisplaySio.emit("new_data", data)
+                        # TODO: Create way to identify which car we are using
+                    await asyncio.sleep(0.05)
 
-                # Transmit to the cloud
-                if not DISABLE_REMOTE and data:
-                    car_remote.handle_record(data)
+                    # Transmit to the cloud
+                    if not DISABLE_REMOTE:
+                        car_remote.handle_record(data)
 
-                # Write data locally to a CSV file
-                if not DISABLE_LOCAL and data:
-                    car_cache.handle_record(data)
+                    # Write data locally to a CSV file
+                    if not DISABLE_LOCAL:
+                        car_cache.handle_record(data)
             except SmSerialError as exc:
                 print(exc)
             except TransmitterError:

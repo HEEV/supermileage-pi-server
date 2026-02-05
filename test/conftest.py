@@ -8,7 +8,7 @@ import pytest
 @pytest.fixture
 def default_env(monkeypatch):
     """fixture providing basic environment for testing"""
-    monkeypatch.setenv("DISABLE_REMOTE", "False")
+    monkeypatch.setenv("DISABLE_REMOTE", "True") # TODO: #22 Change to False when RemoteTrasmitter is implemented
     monkeypatch.setenv("DISABLE_LOCAL", "False")
     monkeypatch.setenv("DISABLE_DISPLAY", "False")
     monkeypatch.setenv("TESTING", "True")
