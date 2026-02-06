@@ -1,6 +1,9 @@
 import datetime
 from abc import ABC, abstractmethod
 from csv import writer
+from os import getenv
+
+import paho.mqtt.client as mqtt
 
 from configuration_generator import Sensor
 
@@ -82,11 +85,42 @@ class LocalTransmitter(DataTransmitter):
 class RemoteTransmitter(DataTransmitter):
     """
     A transmitter to send data over MQTT to the cloud server.
-    TODO: This is unimplemented.
     """
 
     def __init__(self):
-        pass
+        self._broker_address = getenv("MQTT_HOST", None)
+        self._port = getenv("MQTT_PORT", None)
+        self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
+        self._username = getenv("MQTT_USERNAME", None)
+        self._password = getenv("MQTT_PASSWORD", None)
+        if (
+            not self._broker_address
+            or not self._port
+            or not self._publish_topic
+            or not self._username
+            or not self._password
+        ):
+            raise TransmitterError(
+                "MQTT broker address, port, publish topic, username, or password not set in environment variables."
+            )
+        self._port = int(self._port)
+
+        self._client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            "Python_Publisher",
+            reconnect_on_failure=True,
+            transport="websockets",
+        )
+        self._client.username_pw_set(self._username, self._password)
+        try:
+            self._client.connect(self._broker_address, self._port)
+            print(
+                f"Connected to MQTT broker at {self._broker_address}:{self._port} as {self._username}"
+            )
+        except ConnectionRefusedError as exc:
+            raise TransmitterError(
+                f"Could not connect to MQTT broker at {self._broker_address}:{self._port} as {self._username}: {exc}"
+            ) from exc
 
     def handle_record(self, data: dict):
         """
@@ -95,6 +129,19 @@ class RemoteTransmitter(DataTransmitter):
         Args:
             data(dict): the data record to be sent
         """
-        raise NotImplementedError(
-            "RemoteTransmitter.handle_record is not yet implemented."
-        )
+        try:
+            result = self._client.publish(
+                self._publish_topic, str(data), qos=0
+            )  # QoS 0 = fire and forget
+            if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                raise TransmitterError(
+                    f"Failed to publish to MQTT broker at {self._broker_address}:{self._port} on topic {self._publish_topic}, return code: {result.rc}"
+                )
+        except ValueError as exc:
+            raise TransmitterError(
+                f"Problem publishing to MQTT broker at on topic {self._publish_topic}: Topic or QoS is invalid. {exc}"
+            ) from exc
+
+    def disconnect(self):
+        """Disconnect the MQTT client cleanly."""
+        self._client.disconnect()

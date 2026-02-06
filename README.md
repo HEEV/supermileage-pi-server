@@ -9,14 +9,19 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 ## Environment
 
-| Variable Name    | Description                                                                    | Example                                     |
-| ---------------- | ------------------------------------------------------------------------------ | ------------------------------------------- |
-| CONFIG_FILE_PATH | path to the sensor channel configuration file                                  | path/to/config.json                         |
-| DATA_PACKET_SIZE | **OPTIONAL** the size of the data packet expected from the Arduino             | 23                                          |
-| TESTING          | **OPTIONAL** boolean to enable testing behavior, including mocking connections | True                                        |
-| DISABLE_REMOTE   | **OPTIONAL** boolean to disable the remote data connection                     | True                                        |
-| DISABLE_LOCAL    | **OPTIONAL** boolean to disable the local file cache                           | True                                        |
-| DISABLE_DISPLAY  | **OPTIONAL** boolean to disable the local display data connection              | True                                        | 
+| Variable Name      | Description                                                                    | Example                                     |
+| ------------------ | ------------------------------------------------------------------------------ | ------------------------------------------- |
+| MQTT_HOST       | the host address for the MQTT Broker                                           | localhost                                   |
+| MQTT_PORT          | the port for the MQTT Broker                                                   | 9001                                        |
+| MQTT_PUBLISH_TOPIC | the topic to publish data packets to                                           | cars/car_a/data                             |
+| MQTT_USERNAME      | the username credential of the computer for the MQTT Broker                    | car_a                                       |
+| MQTT_PASSWORD      | the password credential of the computer for the MQTT Broker                    | PaSsWoRd                                    |
+| CONFIG_FILE_PATH   | path to the sensor channel configuration file                                  | path/to/config.json                         |
+| DATA_PACKET_SIZE   | **OPTIONAL** the size of the data packet expected from the Arduino             | 23                                          |
+| TESTING            | **OPTIONAL** boolean to enable testing behavior, including mocking connections | True                                        |
+| DISABLE_REMOTE     | **OPTIONAL** boolean to disable the remote data connection                     | True                                        |
+| DISABLE_LOCAL      | **OPTIONAL** boolean to disable the local file cache                           | True                                        |
+| DISABLE_DISPLAY    | **OPTIONAL** boolean to disable the local display data connection              | True                                        | 
 
 ## Installation
 
