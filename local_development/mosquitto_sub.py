@@ -13,6 +13,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
     client.subscribe(getenv("MQTT_PUBLISH_TOPIC", "cars/sting/data"))  # Subscribe to the topic
+    client.subscribe(getenv("MQTT_PUBLISH_TOPIC", "cars/sting/data"))  # Subscribe to the topic
 
 
 # The callback for when a PUBLISH message is received from the broker.
@@ -27,6 +28,8 @@ client = mqtt.Client(
 # Assign callback functions
 client.on_connect = on_connect
 client.on_message = on_message
+
+print(f"connecting to {getenv('MQTT_HOST', 'localhost')}:{getenv('MQTT_PORT', 1883)}")
 
 print(f"connecting to {getenv('MQTT_HOST', 'localhost')}:{getenv('MQTT_PORT', 1883)}")
 
