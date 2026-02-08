@@ -80,8 +80,8 @@ async def main():
                         car_cache.handle_record(data)
             except SmSerialError as exc:
                 print(exc)
-            except TransmitterError:
-                print("Error writing to local cache.")
+            except TransmitterError as exc:
+                print(f"Error transmitting data either locally or remotely: {exc}")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()
