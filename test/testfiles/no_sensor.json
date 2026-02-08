@@ -1,0 +1,12 @@
+{
+    "cars": {
+        "car1": {
+            "active": true,
+            "theme": "color-theme",
+            "metadata": {
+                "weight": 200,
+                "power_plant": "gasoline"
+            }
+        }
+    }
+} 

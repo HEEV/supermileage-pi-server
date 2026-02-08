@@ -1,19 +1,26 @@
-
 import datetime
 import math
 import struct
+
 from configuration_generator import ConfigurationGenerator
 
 
 class DataReader:
+    """
+    Processes Arduino data packets and outputs data structures based on the car configuration.
+
+    Args:
+        config(ConfigurationGenerator): the current car sensor configuration
+    """
+
     def __init__(self, config: ConfigurationGenerator):
         self._config = config
-        self._packet_format = '<ffffBBBBBH'
+        self._packet_format = "<ffffBBBBBH"
         self._packet_size = struct.calcsize(self._packet_format)
         self._distance_traveled = 0
         self._last_update = 0
-    
-    def read_sensor_data(self, raw_data: bytes) -> dict:
+
+    def parse_sensor_data(self, raw_data: bytes) -> dict | None:
         """
         Reads raw sensor data and converts it based on the configuration.
 
@@ -21,11 +28,17 @@ class DataReader:
             raw_data (bytes): Raw bytes of sensor values.
         Returns:
             dict: A dictionary with sensor names as keys and converted values.
+            None: if the raw data is empty, then return a NoneType object.
         """
         # Validate and unpack the raw data
         if len(raw_data) != self._packet_size:
-            raise ValueError(f"Invalid data size: expected {self._packet_size}, got {len(raw_data)}")
-        
+            if len(raw_data) == 0:
+                return None
+            else:
+                raise ValueError(
+                    f"Invalid data size: expected {self._packet_size}, got {len(raw_data)}"
+                )
+
         unpacked_data = struct.unpack(self._packet_format, raw_data)
 
         sensor_data = {}
@@ -35,7 +48,7 @@ class DataReader:
         sensor_data["airspeed"] = round(unpacked_data[1], 2)
         sensor_data["engine_temp"] = round(unpacked_data[2], 2)
         sensor_data["rad_temp"] = round(unpacked_data[3], 2)
-        
+
         # Handle configuration-defined sensor channels
         cars = self._config.config
         for car in cars:
@@ -46,23 +59,35 @@ class DataReader:
                         sensor.conversion_factor = 1.0
                     match sensor_name:
                         case "channel0":
-                            sensor_data[sensor.name] = unpacked_data[4] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[4] * sensor.conversion_factor
+                            )
                         case "channel1":
-                            sensor_data[sensor.name] = unpacked_data[5] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[5] * sensor.conversion_factor
+                            )
                         case "channel2":
-                            sensor_data[sensor.name] = unpacked_data[6] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[6] * sensor.conversion_factor
+                            )
                         case "channel3":
-                            sensor_data[sensor.name] = unpacked_data[7] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[7] * sensor.conversion_factor
+                            )
                         case "channel4":
-                            sensor_data[sensor.name] = unpacked_data[8] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[8] * sensor.conversion_factor
+                            )
                         case "channelA0":
-                            sensor_data[sensor.name] = unpacked_data[9] * sensor.conversion_factor
+                            sensor_data[sensor.name] = (
+                                unpacked_data[9] * sensor.conversion_factor
+                            )
                         case _:
-                            continue # TODO: investigate whether an unknown sensor should raise an error, or if ignore is okay
-        
+                            continue  # TODO: investigate whether an unknown sensor should raise an error, or if ignore is okay
+
         # Calculate the information derived from speed, and return the full data set
         return self._parse_speed_derivative_data(sensor_data)
-    
+
     def reset_distance(self):
         """Resets the distance traveled to zero."""
         self._distance_traveled = 0
@@ -96,4 +121,3 @@ class DataReader:
         data["distance_traveled"] = round(self._distance_traveled, 2)
         data["time"] = timestamp
         return data
-    

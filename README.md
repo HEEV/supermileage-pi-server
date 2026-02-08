@@ -4,18 +4,13 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 
 ## Prerequisites
 
-- Python 3.12 or higher
+- Python 3.11 or higher
 - `pip`
 
 ## Environment
 
 | Variable Name    | Description                                                                    | Example                                     |
 | ---------------- | ------------------------------------------------------------------------------ | ------------------------------------------- |
-| DB_HOST          | Database host URL                                                              | 123abc-postgresql.services.clever-cloud.com |
-| DB_USER          | Database username                                                              | username                                    |
-| DB_PASSWORD      | Database password                                                              | password                                    |
-| DB_PORT          | Database port number                                                           | 6642                                        |
-| DB               | Database name                                                                  | b7ghmkoed5btwtb6org5                        |
 | CONFIG_FILE_PATH | path to the sensor channel configuration file                                  | path/to/config.json                         |
 | DATA_PACKET_SIZE | **OPTIONAL** the size of the data packet expected from the Arduino             | 23                                          |
 | TESTING          | **OPTIONAL** boolean to enable testing behavior, including mocking connections | True                                        |
