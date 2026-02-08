@@ -2,7 +2,7 @@ from os import getenv
 
 
 def get_env_flags():
-    """retreive and return environment flags"""
+    """retrieve and return environment flags"""
     return {
         "DISABLE_REMOTE": getenv("DISABLE_REMOTE", "False") == "True",
         "DISABLE_LOCAL": getenv("DISABLE_LOCAL", "False") == "True",
