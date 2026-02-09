@@ -35,8 +35,12 @@ async def main():
     data_reader = DataReader(config_gen)
 
     # Create CSV for this session
-    car_cache = LocalTransmitter(config_gen.get_sensors()) if not DISABLE_LOCAL else None
-    car_remote = RemoteTransmitter()if not DISABLE_REMOTE else None
+    car_cache = (
+        LocalTransmitter(config_gen.get_sensors()) if not DISABLE_LOCAL else None
+    )
+    car_remote = (
+        RemoteTransmitter(config_gen=config_gen) if not DISABLE_REMOTE else None
+    )
 
     # port='COM6' #for testing on Windows only
     # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
@@ -48,6 +52,8 @@ async def main():
     runner = web.AppRunner(app)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", 8080).start()
+
+    message_counter = 0
 
     # Main server loop
     while True:
@@ -66,17 +72,18 @@ async def main():
                         # TODO: Create way to identify which car we are using
                     await asyncio.sleep(0.05)
 
-                    # Transmit to the cloud
-                    if not DISABLE_REMOTE:
+                    # Transmit to the cloud, only on every 10th message to reduce connection saturation
+                    if not DISABLE_REMOTE and message_counter % 10 == 0:
                         car_remote.handle_record(data)
+                    message_counter += 1
 
                     # Write data locally to a CSV file
                     if not DISABLE_LOCAL:
                         car_cache.handle_record(data)
             except SmSerialError as exc:
                 print(exc)
-            except TransmitterError:
-                print("Error writing to local cache.")
+            except TransmitterError as exc:
+                print(f"Error transmitting data either locally or remotely: {exc}")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()

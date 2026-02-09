@@ -81,7 +81,9 @@ def mock_dependencies():
 
 # Test DISABLE_DISPLAY flag
 @pytest.mark.asyncio
-async def test_disable_display_blocks_socket_emit(mock_dependencies, default_env):
+async def test_disable_display_blocks_socket_emit(
+    mock_dependencies, default_env, mock_mqtt_client
+):
     """DISABLE_DISPLAY should prevent socket emissions"""
     os.environ["DISABLE_DISPLAY"] = "True"
 
@@ -95,7 +97,9 @@ async def test_disable_display_blocks_socket_emit(mock_dependencies, default_env
 
 
 @pytest.mark.asyncio
-async def test_enable_display_allows_socket_emit(mock_dependencies, default_env):
+async def test_enable_display_allows_socket_emit(
+    mock_dependencies, default_env, mock_mqtt_client
+):
     """Socket emissions should work when DISABLE_DISPLAY is False"""
     with patch("main.localDisplaySio.emit") as mock_emit:
         try:
@@ -112,7 +116,9 @@ async def test_enable_display_allows_socket_emit(mock_dependencies, default_env)
 
 # Test DISABLE_LOCAL flag
 @pytest.mark.asyncio
-async def test_disable_local_blocks_csv_write(mock_dependencies, default_env):
+async def test_disable_local_blocks_csv_write(
+    mock_dependencies, default_env, mock_mqtt_client
+):
     """DISABLE_LOCAL should prevent CSV file writes in the loop"""
     os.environ["DISABLE_LOCAL"] = "True"
 
@@ -134,7 +140,9 @@ async def test_disable_local_blocks_csv_write(mock_dependencies, default_env):
 
 
 @pytest.mark.asyncio
-async def test_enable_local_allows_csv_write(mock_dependencies, default_env):
+async def test_enable_local_allows_csv_write(
+    mock_dependencies, default_env, mock_mqtt_client
+):
     """CSV writing should work when DISABLE_LOCAL is False"""
     with patch("main.LocalTransmitter._write_to_csv") as mock_write:
         try:
