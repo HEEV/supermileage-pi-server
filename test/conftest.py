@@ -3,7 +3,7 @@ import struct
 from unittest.mock import MagicMock, patch
 
 import pytest
-
+import paho.mqtt.client as mqtt
 
 @pytest.fixture
 def default_env(monkeypatch):
@@ -20,6 +20,7 @@ def default_env(monkeypatch):
     monkeypatch.setenv("MQTT_USERNAME", "user")
     monkeypatch.setenv("MQTT_PASSWORD", "password")
     monkeypatch.setenv("MQTT_PUBLISH_TOPIC", "cars/user/data")
+    monkeypatch.setenv("MQTT_SUBSCRIBE_TOPIC", "cars/user/config")
     yield
 
 
@@ -63,7 +64,12 @@ def mock_serial():
         instance.is_open = True
         yield mock_ser
 
-def mock_remote_transmitter():
-    """mock RemoteTransmitter fixture"""
-    with patch("data_transmitter.RemoteTransmitter") as mock_transmitter:
-        yield mock_transmitter
+@pytest.fixture
+def mock_mqtt_client():
+    """mock MQTT Client fixture"""
+    with patch('paho.mqtt.client.Client') as mock_client_class:
+        mock_client_instance = mock_client_class.return_value
+        mock_publish_result = MagicMock()
+        mock_publish_result.rc = mqtt.MQTT_ERR_SUCCESS
+        mock_client_instance.publish.return_value = mock_publish_result
+        yield mock_client_class
