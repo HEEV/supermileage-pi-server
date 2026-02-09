@@ -1,11 +1,10 @@
 from unittest.mock import patch
 
 import freezegun
+import paho.mqtt.client as mqtt
 import pytest
 
 from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
-
-import paho.mqtt.client as mqtt
 
 
 @freezegun.freeze_time("2024-01-01 12:00:00")
@@ -95,80 +94,96 @@ class TestRemoteTransmitter:
             RemoteTransmitter(config_gen=mock_config_generator)
         assert "not set in environment variables" in str(exc_info.value)
 
-    def test_initialization_connection_refused(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_initialization_connection_refused(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that initialization raises TransmitterError on connection failure"""
-        mock_mqtt_client.return_value.connect.side_effect=ConnectionRefusedError("Connection refused")
+        mock_mqtt_client.return_value.connect.side_effect = ConnectionRefusedError(
+            "Connection refused"
+        )
         with pytest.raises(TransmitterError) as exc_info:
             RemoteTransmitter(config_gen=mock_config_generator)
         assert "Could not connect to MQTT broker" in str(exc_info.value)
 
-    def test_handle_record_publishes_data(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_handle_record_publishes_data(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that handle_record publishes data to MQTT broker"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
         data_record = {"speed": 30.0}
-        
-        with patch.object(remote_transmitter._client, 'publish') as mock_publish:
+
+        with patch.object(remote_transmitter._client, "publish") as mock_publish:
             mock_publish.return_value.rc = mqtt.MQTT_ERR_SUCCESS
             remote_transmitter.handle_record(data_record)
-            
+
             mock_publish.assert_called_once_with(
-                remote_transmitter._publish_topic,
-                str(data_record),
-                qos=0
+                remote_transmitter._publish_topic, str(data_record), qos=0
             )
 
-    def test_handle_record_publish_failure(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_handle_record_publish_failure(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that handle_record raises TransmitterError on publish failure"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
         data_record = {"speed": 30.0}
-        
-        with patch.object(remote_transmitter._client, 'publish') as mock_publish:
+
+        with patch.object(remote_transmitter._client, "publish") as mock_publish:
             mock_publish.return_value.rc = mqtt.MQTT_ERR_NO_CONN
             with pytest.raises(TransmitterError) as exc_info:
                 remote_transmitter.handle_record(data_record)
             assert "Failed to publish" in str(exc_info.value)
 
-    def test_handle_record_value_error(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_handle_record_value_error(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that handle_record raises TransmitterError on ValueError"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
         data_record = {"speed": 30.0}
-        
-        with patch.object(remote_transmitter._client, 'publish', side_effect=ValueError("Invalid topic")):
+
+        with patch.object(
+            remote_transmitter._client,
+            "publish",
+            side_effect=ValueError("Invalid topic"),
+        ):
             with pytest.raises(TransmitterError) as exc_info:
                 remote_transmitter.handle_record(data_record)
             assert "Topic or QoS is invalid" in str(exc_info.value)
 
-    def test_receive_message_updates_config(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_receive_message_updates_config(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that _receive_message calls update_config on the config generator"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
-        
+
         # Create a mock message
-        mock_msg = type('obj', (object,), {
-            'topic': 'cars/user/config',
-            'payload': b'{"new": "config"}'
-        })()
-        
-        with patch.object(mock_config_generator, 'update_config') as mock_update:
+        mock_msg = type(
+            "obj",
+            (object,),
+            {"topic": "cars/user/config", "payload": b'{"new": "config"}'},
+        )()
+
+        with patch.object(mock_config_generator, "update_config") as mock_update:
             remote_transmitter._receive_message(None, None, mock_msg)
             mock_update.assert_called_once_with('{"new": "config"}')
 
-    def test_receive_message_wrong_topic(self, default_env, mock_config_generator, mock_mqtt_client):
+    def test_receive_message_wrong_topic(
+        self, default_env, mock_config_generator, mock_mqtt_client
+    ):
         """Test that _receive_message ignores messages on wrong topic"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
-        
-        mock_msg = type('obj', (object,), {
-            'topic': 'wrong/topic',
-            'payload': b'{"new": "config"}'
-        })()
-        
-        with patch.object(mock_config_generator, 'update_config') as mock_update:
+
+        mock_msg = type(
+            "obj", (object,), {"topic": "wrong/topic", "payload": b'{"new": "config"}'}
+        )()
+
+        with patch.object(mock_config_generator, "update_config") as mock_update:
             remote_transmitter._receive_message(None, None, mock_msg)
             mock_update.assert_not_called()
 
     def test_disconnect(self, default_env, mock_config_generator, mock_mqtt_client):
         """Test that disconnect calls client.disconnect"""
         remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
-        
-        with patch.object(remote_transmitter._client, 'disconnect') as mock_disconnect:
+
+        with patch.object(remote_transmitter._client, "disconnect") as mock_disconnect:
             remote_transmitter.disconnect()
             mock_disconnect.assert_called_once()

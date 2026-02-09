@@ -2,8 +2,9 @@ import os
 import struct
 from unittest.mock import MagicMock, patch
 
-import pytest
 import paho.mqtt.client as mqtt
+import pytest
+
 
 @pytest.fixture
 def default_env(monkeypatch):
@@ -64,10 +65,11 @@ def mock_serial():
         instance.is_open = True
         yield mock_ser
 
+
 @pytest.fixture
 def mock_mqtt_client():
     """mock MQTT Client fixture"""
-    with patch('paho.mqtt.client.Client') as mock_client_class:
+    with patch("paho.mqtt.client.Client") as mock_client_class:
         mock_client_instance = mock_client_class.return_value
         mock_publish_result = MagicMock()
         mock_publish_result.rc = mqtt.MQTT_ERR_SUCCESS

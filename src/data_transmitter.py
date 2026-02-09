@@ -81,6 +81,7 @@ class LocalTransmitter(DataTransmitter):
             csv_writer = writer(file)
             csv_writer.writerow(line)
 
+
 # TODO: Investigate why connection is dropping after a time period on prod
 class RemoteTransmitter(DataTransmitter):
     """
@@ -147,7 +148,7 @@ class RemoteTransmitter(DataTransmitter):
             raise TransmitterError(
                 f"Problem publishing to MQTT broker at on topic {self._publish_topic}: Topic or QoS is invalid. {exc}"
             ) from exc
-        
+
     def _receive_message(self, client, userdata, msg):
         """
         Receive a message from the MQTT broker on the specified topic.
@@ -158,7 +159,9 @@ class RemoteTransmitter(DataTransmitter):
         try:
             if msg.topic == self._subscribe_topic:
                 message = msg.payload.decode()
-                self._config_gen.update_config(message)  # Attempt to update configuration on any message received, regardless of content. If message is invalid, config remains unchanged.
+                self._config_gen.update_config(
+                    message
+                )  # Attempt to update configuration on any message received, regardless of content. If message is invalid, config remains unchanged.
         except ValueError as exc:
             raise TransmitterError(
                 f"Problem receiving message from MQTT broker on topic {msg.topic}: Topic is invalid. {exc}"
