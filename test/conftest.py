@@ -16,7 +16,7 @@ def default_env(monkeypatch):
     config_path = os.path.join(test_dir, "testfiles", "car_config.json")
     monkeypatch.setenv("CONFIG_FILE_PATH", config_path)
     monkeypatch.setenv("MQTT_HOST", "localhost")
-    #monkeypatch.setenv("MQTT_PORT", "9001")
+    monkeypatch.setenv("MQTT_PORT", "9001")
     monkeypatch.setenv("MQTT_USERNAME", "user")
     monkeypatch.setenv("MQTT_PASSWORD", "password")
     monkeypatch.setenv("MQTT_PUBLISH_TOPIC", "cars/user/data")
@@ -62,3 +62,8 @@ def mock_serial():
         ] * 2 + [b""]  # empty string to signal end of data
         instance.is_open = True
         yield mock_ser
+
+def mock_remote_transmitter():
+    """mock RemoteTransmitter fixture"""
+    with patch("data_transmitter.RemoteTransmitter") as mock_transmitter:
+        yield mock_transmitter

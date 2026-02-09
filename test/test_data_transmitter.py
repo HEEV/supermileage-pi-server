@@ -78,16 +78,16 @@ class TestLocalTransmitter:
 class TestRemoteTransmitter:
     """Tests for the RemoteTransmitter class"""
 
-    def test_initialization(self):
+    def test_initialization(self, default_env, mock_config_generator):
         """Test that RemoteTransmitter initializes without error
         Note: this test does not test functionality due to lack of implementation.
         """
-        remote_transmitter = RemoteTransmitter()
+        remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
 
         assert remote_transmitter is not None
 
-    def test_handle_record_not_implemented(self):
+    def test_handle_record_not_implemented(self, mock_config_generator, mock_remote_transmitter):
         """Test that handle_record reports not implemented"""
-        remote_transmitter = RemoteTransmitter()
-        with pytest.raises(NotImplementedError):
-            remote_transmitter.handle_record({"speed": 30.0})
+        remote_transmitter = RemoteTransmitter(config_gen=mock_config_generator)
+        remote_transmitter.handle_record({"speed": 30.0})
+        mock_remote_transmitter.handle_record.assert_called_once_with({"speed": 30.0})

@@ -38,7 +38,7 @@ async def main():
     car_cache = (
         LocalTransmitter(config_gen.get_sensors()) if not DISABLE_LOCAL else None
     )
-    car_remote = RemoteTransmitter() if not DISABLE_REMOTE else None
+    car_remote = RemoteTransmitter(config_gen=config_gen) if not DISABLE_REMOTE else None
 
     # port='COM6' #for testing on Windows only
     # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection

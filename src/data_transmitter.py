@@ -5,7 +5,7 @@ from os import getenv
 
 import paho.mqtt.client as mqtt
 
-from configuration_generator import Sensor
+from configuration_generator import ConfigurationGenerator, Sensor
 
 
 class TransmitterError(Exception):
@@ -81,18 +81,20 @@ class LocalTransmitter(DataTransmitter):
             csv_writer = writer(file)
             csv_writer.writerow(line)
 
-
+# TODO: Investigate why connection is dropping after a time period on prod
 class RemoteTransmitter(DataTransmitter):
     """
     A transmitter to send data over MQTT to the cloud server.
     """
 
-    def __init__(self):
+    def __init__(self, config_gen: ConfigurationGenerator = None):
         self._broker_address = getenv("MQTT_HOST", None)
         self._port = getenv("MQTT_PORT", None)
         self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
+        self._subscribe_topic = getenv("MQTT_SUBSCRIBE_TOPIC", None)
         self._username = getenv("MQTT_USERNAME", None)
         self._password = getenv("MQTT_PASSWORD", None)
+        self._config_gen = config_gen
         if (
             not self._broker_address
             or not self._port
@@ -107,7 +109,7 @@ class RemoteTransmitter(DataTransmitter):
 
         self._client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION2,
-            "Python_Publisher",
+            f"{self._username}_python_publisher",
             reconnect_on_failure=True,
             transport="websockets",
         )
@@ -117,6 +119,10 @@ class RemoteTransmitter(DataTransmitter):
             print(
                 f"Connected to MQTT broker at {self._broker_address}:{self._port} as {self._username}"
             )
+            # Subscribe to config topic
+            self._client.subscribe(self._subscribe_topic)
+            self._client.on_message = self._receive_message
+            self._client.loop_start()
         except ConnectionRefusedError as exc:
             raise TransmitterError(
                 f"Could not connect to MQTT broker at {self._broker_address}:{self._port} as {self._username}: {exc}"
@@ -140,6 +146,22 @@ class RemoteTransmitter(DataTransmitter):
         except ValueError as exc:
             raise TransmitterError(
                 f"Problem publishing to MQTT broker at on topic {self._publish_topic}: Topic or QoS is invalid. {exc}"
+            ) from exc
+        
+    def _receive_message(self, client, userdata, msg):
+        """
+        Receive a message from the MQTT broker on the specified topic.
+
+        Args:
+            topic (str): the topic to subscribe to for receiving messages
+        """
+        try:
+            if msg.topic == self._subscribe_topic:
+                message = msg.payload.decode()
+                self._config_gen.update_config(message)  # Attempt to update configuration on any message received, regardless of content. If message is invalid, config remains unchanged.
+        except ValueError as exc:
+            raise TransmitterError(
+                f"Problem receiving message from MQTT broker on topic {msg.topic}: Topic is invalid. {exc}"
             ) from exc
 
     def disconnect(self):
