@@ -1,8 +1,11 @@
 import datetime
 from abc import ABC, abstractmethod
 from csv import writer
+from os import getenv
 
-from configuration_generator import Sensor
+import paho.mqtt.client as mqtt
+
+from configuration_generator import ConfigurationGenerator, Sensor
 
 
 class TransmitterError(Exception):
@@ -79,14 +82,53 @@ class LocalTransmitter(DataTransmitter):
             csv_writer.writerow(line)
 
 
+# TODO: Investigate why connection is dropping after a time period on prod
 class RemoteTransmitter(DataTransmitter):
     """
     A transmitter to send data over MQTT to the cloud server.
-    TODO: This is unimplemented.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, config_gen: ConfigurationGenerator = None):
+        self._broker_address = getenv("MQTT_HOST", None)
+        self._port = getenv("MQTT_PORT", None)
+        self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
+        self._subscribe_topic = getenv("MQTT_SUBSCRIBE_TOPIC", None)
+        self._username = getenv("MQTT_USERNAME", None)
+        self._password = getenv("MQTT_PASSWORD", None)
+        self._config_gen = config_gen
+        if (
+            not self._broker_address
+            or not self._port
+            or not self._publish_topic
+            or not self._username
+            or not self._password
+        ):
+            raise TransmitterError(
+                "MQTT broker address, port, publish topic, username, or password not set in environment variables."
+            )
+        self._port = int(self._port)
+
+        self._client = mqtt.Client(
+            mqtt.CallbackAPIVersion.VERSION2,
+            f"{self._username}_python_publisher",
+            reconnect_on_failure=True,
+            transport="websockets",
+        )
+        self._client.username_pw_set(self._username, self._password)
+        self._client.tls_set(cert_reqs=mqtt.ssl.CERT_REQUIRED)
+        try:
+            self._client.connect(self._broker_address, self._port)
+            print(
+                f"Connected to MQTT broker at {self._broker_address}:{self._port} as {self._username}"
+            )
+            # Subscribe to config topic
+            self._client.subscribe(self._subscribe_topic)
+            self._client.on_message = self._receive_message
+            self._client.loop_start()
+        except ConnectionRefusedError as exc:
+            raise TransmitterError(
+                f"Could not connect to MQTT broker at {self._broker_address}:{self._port} as {self._username}: {exc}"
+            ) from exc
 
     def handle_record(self, data: dict):
         """
@@ -95,6 +137,37 @@ class RemoteTransmitter(DataTransmitter):
         Args:
             data(dict): the data record to be sent
         """
-        raise NotImplementedError(
-            "RemoteTransmitter.handle_record is not yet implemented."
-        )
+        try:
+            result = self._client.publish(
+                self._publish_topic, str(data), qos=0
+            )  # QoS 0 = fire and forget
+            if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                raise TransmitterError(
+                    f"Failed to publish to MQTT broker at {self._broker_address}:{self._port} on topic {self._publish_topic}, return code: {result.rc}"
+                )
+        except ValueError as exc:
+            raise TransmitterError(
+                f"Problem publishing to MQTT broker at on topic {self._publish_topic}: Topic or QoS is invalid. {exc}"
+            ) from exc
+
+    def _receive_message(self, client, userdata, msg):
+        """
+        Receive a message from the MQTT broker on the specified topic.
+
+        Args:
+            topic (str): the topic to subscribe to for receiving messages
+        """
+        try:
+            if msg.topic == self._subscribe_topic:
+                message = msg.payload.decode()
+                self._config_gen.update_config(
+                    message
+                )  # Attempt to update configuration on any message received, regardless of content. If message is invalid, config remains unchanged.
+        except ValueError as exc:
+            raise TransmitterError(
+                f"Problem receiving message from MQTT broker on topic {msg.topic}: Topic is invalid. {exc}"
+            ) from exc
+
+    def disconnect(self):
+        """Disconnect the MQTT client cleanly."""
+        self._client.disconnect()

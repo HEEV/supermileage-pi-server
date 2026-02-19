@@ -212,3 +212,25 @@ class ConfigurationGenerator:
             if car.name == car_name:
                 return car.metadata
         raise ConfigurationGeneratorError(f"Car not found: {car_name}")
+
+    def update_config(self, config_string: str) -> None:
+        """
+        Update the configuration stored in the JSON and reload it into the generator.
+
+        Args:
+            config_string(str): the new configuration as a JSON string
+        """
+        try:
+            config_dict = json.loads(config_string)
+            with open(self._config_file_path, "w") as config_file:
+                json.dump(config_dict, config_file, indent=4)
+            self._load_config()
+            print("Configuration updated successfully")
+        except json.JSONDecodeError as exc:
+            raise ConfigurationGeneratorError(
+                f"Invalid JSON string provided for configuration update: {exc}"
+            ) from exc
+        except OSError as exc:
+            raise ConfigurationGeneratorError(
+                f"Problem writing updated configuration to file: {exc}"
+            ) from exc

@@ -1,5 +1,5 @@
 import struct
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import serial
@@ -24,101 +24,83 @@ DEFAULT_PACKET = struct.pack(
 class TestSmSerial:
     """Tests for the SmSerial class."""
 
+    @pytest.fixture
+    def sm_serial_live(self, mock_serial, monkeypatch):
+        monkeypatch.setenv("TESTING", "False")
+        return SmSerial()
+
     def test_initialization_default(self, default_env):
-        """Test default initialization of SmSerial."""
         with patch("glob.glob", return_value=["/dev/ttyUSB0"]):
             sm_serial = SmSerial()
         assert sm_serial._baudrate == 9600
         assert sm_serial._timeout == 1
-        assert sm_serial._testing == True
+        assert sm_serial._testing is True
         assert sm_serial._port == "/dev/ttyUSB0"
 
     def test_initialization_full(self, mock_serial, monkeypatch):
-        """Test full initialization of SmSerial with parameters."""
         monkeypatch.setenv("TESTING", "False")
         sm_serial = SmSerial(port="/dev/ttyUSB2", baudrate=115200, timeout=0.5)
         assert sm_serial._port == "/dev/ttyUSB2"
         assert sm_serial._baudrate == 115200
         assert sm_serial._timeout == 0.5
-        assert sm_serial._testing == False
-        assert (
-            sm_serial._ser is not None
-        )  # Serial connection should be established in non-testing mode
+        assert sm_serial._testing is False
+        assert sm_serial._ser is not None
 
     def test_initialization_failed_connection(self, mock_serial, monkeypatch):
-        """Test initialization when serial connection fails."""
         monkeypatch.setenv("TESTING", "False")
         mock_serial.side_effect = serial.SerialException(
             "PermissionError: Access denied"
         )
-        with pytest.raises(SmSerialError) as excinfo:
+        with pytest.raises(SmSerialError, match="Permission Error"):
             SmSerial(port="/dev/ttyUSB3")
-        assert "Permission Error" in str(excinfo.value)
-
         mock_serial.side_effect = serial.SerialException("Other serial error")
         with pytest.raises(SmSerialError):
             SmSerial(port="/dev/ttyUSB4")
 
-    def test_reconnect_success(self, mock_serial, monkeypatch):
-        """Test successful reconnection of SmSerial."""
-        monkeypatch.setenv("TESTING", "False")
-        sm_serial = SmSerial()
-        sm_serial._ser.is_open = False  # Simulate disconnected state
-        sm_serial.reconnect()
-        sm_serial._ser.open.assert_called_once()
-        assert sm_serial._ser is not None
+    def test_reconnect(self, sm_serial_live, capsys):
+        sm_serial_live._ser.is_open = False
+        sm_serial_live.reconnect()
+        sm_serial_live._ser.open.assert_called_once()
 
-    def test_reconnect_failure(self, mock_serial, monkeypatch, capsys):
-        """Test reconnection failure of SmSerial."""
-        monkeypatch.setenv("TESTING", "False")
-        sm_serial = SmSerial()
-        sm_serial._ser.is_open = False  # Simulate disconnected state
-        sm_serial._ser.open.side_effect = serial.SerialException("Failed to open port")
-        sm_serial.reconnect()
+        sm_serial_live._ser.is_open = False
+        sm_serial_live._ser.open.side_effect = serial.SerialException(
+            "Failed to open port"
+        )
+        sm_serial_live.reconnect()
         assert "Failed to reconnect to serial" in capsys.readouterr().out
 
-    def test_read_response(self, mock_serial, monkeypatch):
-        """Test reading response from SmSerial."""
-        monkeypatch.setenv("TESTING", "False")
-        sm_serial = SmSerial()
-        response = sm_serial.read_response(23)
-        assert isinstance(response, bytes)
-        assert len(response) == 23
-        assert response == DEFAULT_PACKET
-        assert (
-            mock_serial.return_value.read.call_count == 3
-        )  # Ensure multiple reads were made
+    def test_read_response(self, sm_serial_live, mock_serial):
+        assert sm_serial_live.read_response(23) == DEFAULT_PACKET
+        assert mock_serial.return_value.read.call_count == 3
 
     def test_read_response_testing_mode(self, mock_serial, monkeypatch):
-        """Test reading response in testing mode."""
         monkeypatch.setenv("TESTING", "True")
         sm_serial = SmSerial()
-        response = sm_serial.read_response(23)
-        assert isinstance(response, bytes)
-        assert len(response) == 23
-        assert response == DEFAULT_PACKET
-        mock_serial.return_value.read.assert_not_called()  # No reads should be made in testing mode
+        assert sm_serial.read_response(23) == DEFAULT_PACKET
+        assert sm_serial.read_response(23) == b""  # second call returns empty bytes
+        mock_serial.return_value.read.assert_not_called()
 
-    def test_read_response_failure(self, mock_serial, monkeypatch):
-        """Test reading response failure from SmSerial."""
+    def test_crashloop_retry(self, monkeypatch):
         monkeypatch.setenv("TESTING", "False")
-        sm_serial = SmSerial()
+        with (
+            patch("sm_serial.sleep") as mock_sleep,
+            patch(
+                "serial.Serial",
+                side_effect=[serial.SerialException("Other error"), MagicMock()],
+            ),
+        ):
+            SmSerial(crashloop=True)
+            mock_sleep.assert_called_once_with(3)
+
+    def test_read_response_failure(self, sm_serial_live, mock_serial):
         mock_serial.return_value.read.side_effect = serial.SerialException("Read error")
-        with pytest.raises(SmSerialError) as excinfo:
-            sm_serial.read_response(23)
-        assert "Error reading from serial, most likely a disconnect." in str(
-            excinfo.value
-        )
+        with pytest.raises(SmSerialError, match="Error reading from serial"):
+            sm_serial_live.read_response(23)
 
     def test_is_open_testing_mode(self, monkeypatch):
-        """Test is_open method in testing mode."""
         monkeypatch.setenv("TESTING", "True")
-        sm_serial = SmSerial()
-        assert sm_serial.is_open() == True
+        assert SmSerial().is_open() is True
 
-    def test_close(self, mock_serial, monkeypatch):
-        """Test closing the SmSerial connection."""
-        monkeypatch.setenv("TESTING", "False")
-        sm_serial = SmSerial()
-        sm_serial.close()
+    def test_close(self, sm_serial_live, mock_serial):
+        sm_serial_live.close()
         mock_serial.return_value.close.assert_called_once()
