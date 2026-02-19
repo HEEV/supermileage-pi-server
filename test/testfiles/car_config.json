@@ -1,37 +1,25 @@
 {
     "cars": {
-        "car1": {
+        "car3": {
+            "name": "car3",
             "active": true,
-            "theme": "color-theme",
-            "metadata": {
-                "weight": 200,
-                "power_plant": "gasoline"
-            },
+            "theme": "new-theme",
             "sensors": {
-                "channelA0": {
-                    "name": "voltage",
-                    "unit": "volts",
-                    "conversion_factor": 0.35,
+                "channelA1": {
+                    "name": "current",
+                    "unit": "amps",
+                    "conversion_factor": 0.5,
                     "input_type": "analog",
                     "limits": {
                         "min": 0.0,
-                        "max": 36.0
+                        "max": 100.0
                     }
-                },
-                "channel2": {
-                    "name": "button",
-                    "unit": "",
-                    "conversion_factor": 0.0,
-                    "input_type": "digital",
-                    "limits": {}
                 }
+            },
+            "metadata": {
+                "weight": 150,
+                "power_plant": "electric"
             }
-        },
-        "car2": {
-            "active": false,
-            "theme": "color-theme",
-            "metadata": {},
-            "sensors": {}
         }
     }
 }

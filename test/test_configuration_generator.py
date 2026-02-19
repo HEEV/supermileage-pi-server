@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from configuration_generator import (
@@ -194,3 +196,45 @@ class TestConfigurationGenerator:
         assert sensor.conversion_factor == 0.0
         assert sensor.name == "button"
         assert sensor.input_type == "digital"
+
+    # TODO: fix this so it does not modify the actual config file
+    def test_update_config_success(self):
+        """Test successful config update"""
+        # with mock.patch("builtins.open", mock.mock_open()) as mock_file:
+        config_gen = ConfigurationGenerator("test/testfiles/car_config.json")
+        new_config = json.dumps(
+            {
+                "cars": {
+                    "car3": {
+                        "name": "car3",
+                        "active": True,
+                        "theme": "new-theme",
+                        "sensors": {
+                            "channelA1": {
+                                "name": "current",
+                                "unit": "amps",
+                                "conversion_factor": 0.5,
+                                "input_type": "analog",
+                                "limits": {"min": 0.0, "max": 100.0},
+                            }
+                        },
+                        "metadata": {"weight": 150, "power_plant": "electric"},
+                    }
+                }
+            }
+        )
+        config_gen.update_config(new_config)
+
+        assert len(config_gen.config) == 3
+        assert config_gen.config[2].name == "car3"
+        assert config_gen.config[2].active is True
+        assert config_gen.config[2].theme == "new-theme"
+        assert "channelA1" in config_gen.config[2].sensors
+        assert config_gen.config[2].metadata.weight == 150
+        assert config_gen.config[2].metadata.power_plant == "electric"
+
+    def test_update_config_error(self):
+        """Test error when updating config with invalid JSON and OS Error"""
+        config_gen = ConfigurationGenerator("test/testfiles/car_config.json")
+        with pytest.raises(ConfigurationGeneratorError):
+            config_gen.update_config("invalid_json")

@@ -21,6 +21,7 @@ client.ws_set_options(
 client.username_pw_set(
     getenv("MQTT_USERNAME", "pits_crew"), getenv("MQTT_PASSWORD", "password3")
 )
+client.tls_set(cert_reqs=mqtt.ssl.CERT_REQUIRED)
 client.connect(broker_address, int(getenv("MQTT_PORT", 1883)))
 
 client.publish(

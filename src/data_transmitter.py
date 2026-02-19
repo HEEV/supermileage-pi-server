@@ -115,6 +115,7 @@ class RemoteTransmitter(DataTransmitter):
             transport="websockets",
         )
         self._client.username_pw_set(self._username, self._password)
+        self._client.tls_set(cert_reqs=mqtt.ssl.CERT_REQUIRED)
         try:
             self._client.connect(self._broker_address, self._port)
             print(
