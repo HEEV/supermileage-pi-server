@@ -2,26 +2,26 @@ import os
 import struct
 from unittest.mock import MagicMock, patch
 
+import paho.mqtt.client as mqtt
 import pytest
 
 
 @pytest.fixture
 def default_env(monkeypatch):
     """fixture providing basic environment for testing"""
-    monkeypatch.setenv(
-        "DISABLE_REMOTE", "True"
-    )  # TODO: #22 Change to False when RemoteTrasmitter is implemented
+    monkeypatch.setenv("DISABLE_REMOTE", "False")
     monkeypatch.setenv("DISABLE_LOCAL", "False")
     monkeypatch.setenv("DISABLE_DISPLAY", "False")
     monkeypatch.setenv("TESTING", "True")
     test_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(test_dir, "testfiles", "car_config.json")
     monkeypatch.setenv("CONFIG_FILE_PATH", config_path)
-    monkeypatch.setenv("DB_HOST", "localhost")
-    monkeypatch.setenv("DB_USER", "user")
-    monkeypatch.setenv("DB_PASSWORD", "password")
-    monkeypatch.setenv("DB_PORT", "27017")
-    monkeypatch.setenv("DB", "database")
+    monkeypatch.setenv("MQTT_HOST", "localhost")
+    monkeypatch.setenv("MQTT_PORT", "9001")
+    monkeypatch.setenv("MQTT_USERNAME", "user")
+    monkeypatch.setenv("MQTT_PASSWORD", "password")
+    monkeypatch.setenv("MQTT_PUBLISH_TOPIC", "cars/user/data")
+    monkeypatch.setenv("MQTT_SUBSCRIBE_TOPIC", "cars/user/config")
     yield
 
 
@@ -64,3 +64,14 @@ def mock_serial():
         ] * 2 + [b""]  # empty string to signal end of data
         instance.is_open = True
         yield mock_ser
+
+
+@pytest.fixture
+def mock_mqtt_client():
+    """mock MQTT Client fixture"""
+    with patch("paho.mqtt.client.Client") as mock_client_class:
+        mock_client_instance = mock_client_class.return_value
+        mock_publish_result = MagicMock()
+        mock_publish_result.rc = mqtt.MQTT_ERR_SUCCESS
+        mock_client_instance.publish.return_value = mock_publish_result
+        yield mock_client_class
