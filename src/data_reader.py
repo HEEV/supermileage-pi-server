@@ -2,7 +2,7 @@ import datetime
 import math
 import struct
 
-from configuration_generator import ConfigurationGenerator
+from configuration_generator import Sensor
 
 
 class DataReader:
@@ -10,11 +10,11 @@ class DataReader:
     Processes Arduino data packets and outputs data structures based on the car configuration.
 
     Args:
-        config(ConfigurationGenerator): the current car sensor configuration
+        sensors(dict[str, Sensor]): the current car sensor configuration
     """
 
-    def __init__(self, config: ConfigurationGenerator):
-        self._config = config
+    def __init__(self, sensors: dict[str, Sensor]):
+        self._sensors = sensors
         self._packet_format = "<ffffBBBBBH"
         self._packet_size = struct.calcsize(self._packet_format)
         self._distance_traveled = 0
@@ -50,40 +50,36 @@ class DataReader:
         sensor_data["rad_temp"] = round(unpacked_data[3], 2)
 
         # Handle configuration-defined sensor channels
-        cars = self._config.config
-        for car in cars:
-            if car.active:
-                sensors = car.sensors
-                for sensor_name, sensor in sensors.items():
-                    if sensor.conversion_factor == 0.0:
-                        sensor.conversion_factor = 1.0
-                    match sensor_name:
-                        case "channel0":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[4] * sensor.conversion_factor
-                            )
-                        case "channel1":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[5] * sensor.conversion_factor
-                            )
-                        case "channel2":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[6] * sensor.conversion_factor
-                            )
-                        case "channel3":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[7] * sensor.conversion_factor
-                            )
-                        case "channel4":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[8] * sensor.conversion_factor
-                            )
-                        case "channelA0":
-                            sensor_data[sensor.name] = (
-                                unpacked_data[9] * sensor.conversion_factor
-                            )
-                        case _:
-                            continue  # TODO: investigate whether an unknown sensor should raise an error, or if ignore is okay
+        for sensor_name, sensor in self._sensors.items():
+            if sensor.conversion_factor == 0.0:
+                sensor.conversion_factor = 1.0
+            match sensor_name:
+                case "channel0":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[4] * sensor.conversion_factor
+                    )
+                case "channel1":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[5] * sensor.conversion_factor
+                    )
+                case "channel2":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[6] * sensor.conversion_factor
+                    )
+                case "channel3":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[7] * sensor.conversion_factor
+                    )
+                case "channel4":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[8] * sensor.conversion_factor
+                    )
+                case "channelA0":
+                    sensor_data[sensor.name] = (
+                        unpacked_data[9] * sensor.conversion_factor
+                    )
+                case _:
+                    continue  # TODO: investigate whether an unknown sensor should raise an error, or if ignore is okay
 
         # Calculate the information derived from speed, and return the full data set
         return self._parse_speed_derivative_data(sensor_data)

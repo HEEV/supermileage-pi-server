@@ -29,21 +29,22 @@ async def main():
     DISABLE_REMOTE = flags["DISABLE_REMOTE"]
     DISABLE_LOCAL = flags["DISABLE_LOCAL"]
     DISABLE_DISPLAY = flags["DISABLE_DISPLAY"]
+    CAR_SELECTION = getenv("CURRENT_CAR")
 
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
-    data_reader = DataReader(config_gen)
+    sensors = config_gen.get_sensors(CAR_SELECTION)
+    data_reader = DataReader(sensors)
 
     # Create CSV for this session
     car_cache = (
-        LocalTransmitter(config_gen.get_sensors()) if not DISABLE_LOCAL else None
+        LocalTransmitter(sensors) if not DISABLE_LOCAL else None
     )
     car_remote = (
         RemoteTransmitter(config_gen=config_gen) if not DISABLE_REMOTE else None
     )
 
     # port='COM6' #for testing on Windows only
-    # TODO: Figure out exception handling here. Ultimately we do not want the server to fail here, just to crashloop until successful connection
     ser = SmSerial(timeout=0.025, crashloop=True)
 
     PACKET_SIZE = int(getenv("DATA_PACKET_SIZE")) if getenv("DATA_PACKET_SIZE") else 23

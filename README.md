@@ -24,6 +24,7 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 | DISABLE_REMOTE       | **OPTIONAL** boolean to disable the remote data connection                     | True                                         |
 | DISABLE_LOCAL        | **OPTIONAL** boolean to disable the local file cache                           | True                                         |
 | DISABLE_DISPLAY      | **OPTIONAL** boolean to disable the local display data connection              | True                                         | 
+| CURRENT_CAR          | **OPTIONAL** The car that the computer is currently in                         | "karch"                                      |
 
 ## Installation
 

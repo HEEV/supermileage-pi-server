@@ -1,0 +1,48 @@
+{
+    "cars": {
+        "karch": {
+            "active": true,
+            "theme": "color-theme",
+            "metadata": {
+                "weight": 200,
+                "power_plant": "gasoline"
+            },
+            "sensors": {
+                "channelA0": {
+                    "name": "voltage",
+                    "unit": "volts",
+                    "conversion_factor": 0.35,
+                    "input_type": "analog",
+                    "limits": {
+                        "min": 0.0,
+                        "max": 15.0
+                    }
+                },
+                "channel1": {
+                    "name": "timer_reset_button",
+                    "unit": "",
+                    "conversion_factor": 0.0,
+                    "input_type": "digital",
+                    "limits": {}
+                }
+            }
+        },
+        "sting": {
+            "active": false,
+            "theme": "color-theme",
+            "metadata": {
+                "weight": 200,
+                "power_plant": "electric"
+            },
+            "sensors": {
+                "channel1": {
+                    "name": "timer_reset_button",
+                    "unit": "",
+                    "conversion_factor": 0.0,
+                    "input_type": "digital",
+                    "limits": {}
+                }
+            }
+        }
+    }
+} 

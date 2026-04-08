@@ -82,7 +82,6 @@ class LocalTransmitter(DataTransmitter):
             csv_writer.writerow(line)
 
 
-# TODO: Investigate why connection is dropping after a time period on prod
 class RemoteTransmitter(DataTransmitter):
     """
     A transmitter to send data over MQTT to the cloud server.
