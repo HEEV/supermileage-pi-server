@@ -67,6 +67,7 @@ async def main():
                 print(data)
                 if data:
                     # Broadcast to connected clients
+                    #! - THIS is where the data goes to the driver display
                     if not DISABLE_DISPLAY:
                         await localDisplaySio.emit("new_data", data)
                         # TODO: Create way to identify which car we are using
@@ -82,6 +83,18 @@ async def main():
                         car_cache.handle_record(data)
             except SmSerialError as exc:
                 print(exc)
+            except TransmitterError as exc:
+                print(f"Error transmitting data either locally or remotely: {exc}")
+            except KeyboardInterrupt:
+                print("Keyboard Interrupt, closing connections")
+                ser.close()
+                break
+            try:
+                sim_data = data_reader.parse_sim_data("simulation_msg.json")
+                if not DISABLE_DISPLAY:
+                    await localDisplaySio.emit("new_sim_data", sim_data)
+                    # TODO: Create way to identify which car we are using
+                await asyncio.sleep(0.05)
             except TransmitterError as exc:
                 print(f"Error transmitting data either locally or remotely: {exc}")
             except KeyboardInterrupt:

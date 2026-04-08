@@ -1,6 +1,8 @@
 import datetime
+import json
 import math
 import struct
+from typing import List
 
 from configuration_generator import ConfigurationGenerator
 
@@ -121,3 +123,10 @@ class DataReader:
         data["distance_traveled"] = round(self._distance_traveled, 2)
         data["time"] = timestamp
         return data
+    
+    def parse_sim_data(self, sim_data_file:str) -> List[dict] | None:
+        sim_data = None
+        if sim_data_file is not None:
+            with open(sim_data_file, 'r') as file:
+                sim_data = json.load(file)
+        return sim_data

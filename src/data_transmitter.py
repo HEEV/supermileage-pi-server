@@ -93,8 +93,10 @@ class RemoteTransmitter(DataTransmitter):
         self._port = getenv("MQTT_PORT", None)
         self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
         self._subscribe_topic = getenv("MQTT_SUBSCRIBE_TOPIC", None)
+        self._sim_topic = getenv("MQTT_SIMULATION_TOPIC", None)
         self._username = getenv("MQTT_USERNAME", None)
         self._password = getenv("MQTT_PASSWORD", None)
+        self._sim_data = None
         self._config_gen = config_gen
         if (
             not self._broker_address
@@ -125,6 +127,7 @@ class RemoteTransmitter(DataTransmitter):
             self._client.subscribe(self._subscribe_topic)
             self._client.on_message = self._receive_message
             self._client.loop_start()
+
         except ConnectionRefusedError as exc:
             raise TransmitterError(
                 f"Could not connect to MQTT broker at {self._broker_address}:{self._port} as {self._username}: {exc}"
@@ -158,7 +161,11 @@ class RemoteTransmitter(DataTransmitter):
             topic (str): the topic to subscribe to for receiving messages
         """
         try:
-            if msg.topic == self._subscribe_topic:
+            # TODO - determine how to handle sim data
+            if msg.topic == self._sim_topic:
+                message = msg.payload.decode()
+                self._config_gen.read_sim_data(message)
+            elif msg.topic == self._subscribe_topic:
                 message = msg.payload.decode()
                 self._config_gen.update_config(
                     message

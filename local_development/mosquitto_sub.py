@@ -18,6 +18,9 @@ def on_connect(client, userdata, flags, reason_code, properties):
     client.subscribe(
         getenv("MQTT_SUBSCRIBE_TOPIC", "cars/sting/data")
     )  # Subscribe to the topic
+    client.subscribe(
+        getenv("MQTT_SIMULATION_TOPIC", "cars/sting/sim")
+    )  # Subscribe to the topic
 
 
 # The callback for when a PUBLISH message is received from the broker.

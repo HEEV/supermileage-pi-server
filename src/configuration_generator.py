@@ -234,3 +234,13 @@ class ConfigurationGenerator:
             raise ConfigurationGeneratorError(
                 f"Problem writing updated configuration to file: {exc}"
             ) from exc
+    
+    def read_sim_data(self, sim_string: str) -> None:
+        try:
+            with open("simulation_msg.json", "w") as file:
+                json.dump(sim_string,file)
+            print("Simulation successfully sent to display")
+        except json.JSONDecodeError as exc:
+            raise ConfigurationGeneratorError(
+                f"Invalid JSON string provided for configuration update: {exc}"
+            ) from exc
