@@ -115,19 +115,17 @@ class RemoteTransmitter(DataTransmitter):
         )
         self._client.username_pw_set(self._username, self._password)
         self._client.tls_set(cert_reqs=mqtt.ssl.CERT_REQUIRED)
-        try:
-            self._client.connect(self._broker_address, self._port)
-            print(
-                f"Connected to MQTT broker at {self._broker_address}:{self._port} as {self._username}"
-            )
-            # Subscribe to config topic
-            self._client.subscribe(self._subscribe_topic)
-            self._client.on_message = self._receive_message
-            self._client.loop_start()
-        except ConnectionRefusedError as exc:
-            raise TransmitterError(
-                f"Could not connect to MQTT broker at {self._broker_address}:{self._port} as {self._username}: {exc}"
-            ) from exc
+        self._client.on_connect = self._on_connect
+        self._client.on_message = self._receive_message
+        self._client.reconnect_delay_set(min_delay=1, max_delay=60)
+        self._client.connect_async(self._broker_address, self._port)
+        self._client.loop_start()
+
+    def _on_connect(self, client, userdata, flags, reason_code, properties=None):
+        if getattr(reason_code, "is_failure", False):
+            return
+        # Subscribe after reconnect as well, so config updates resume automatically.
+        client.subscribe(self._subscribe_topic)
 
     def handle_record(self, data: dict):
         """

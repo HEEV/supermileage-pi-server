@@ -59,18 +59,13 @@ class TestRemoteTransmitter:
         return RemoteTransmitter(config_gen=mock_config_generator)
 
     def test_initialization(self, remote_transmitter):
+        remote_transmitter._client.connect_async.assert_called_once()
+        remote_transmitter._client.loop_start.assert_called_once()
         assert remote_transmitter is not None
 
     def test_initialization_missing_env_vars(self, mock_config_generator, monkeypatch):
         monkeypatch.delenv("MQTT_HOST", raising=False)
         with pytest.raises(TransmitterError, match="not set in environment variables"):
-            RemoteTransmitter(config_gen=mock_config_generator)
-
-    def test_initialization_connection_refused(
-        self, default_env, mock_config_generator, mock_mqtt_client
-    ):
-        mock_mqtt_client.return_value.connect.side_effect = ConnectionRefusedError
-        with pytest.raises(TransmitterError, match="Could not connect to MQTT broker"):
             RemoteTransmitter(config_gen=mock_config_generator)
 
     def test_handle_record_publishes_data(self, remote_transmitter):
