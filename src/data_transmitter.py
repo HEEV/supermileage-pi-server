@@ -161,7 +161,6 @@ class RemoteTransmitter(DataTransmitter):
             topic (str): the topic to subscribe to for receiving messages
         """
         try:
-            # TODO - determine how to handle sim data
             if msg.topic == self._sim_topic:
                 message = msg.payload.decode()
                 self._config_gen.read_sim_data(message)

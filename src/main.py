@@ -67,7 +67,6 @@ async def main():
                 print(data)
                 if data:
                     # Broadcast to connected clients
-                    #! - THIS is where the data goes to the driver display
                     if not DISABLE_DISPLAY:
                         await localDisplaySio.emit("new_data", data)
                         # TODO: Create way to identify which car we are using
