@@ -3,52 +3,42 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from configuration_generator import Car, ConfigurationGenerator, Metadata, Sensor
+from configuration_generator import Sensor
 from data_reader import DataReader
 
 
 @pytest.fixture
 def mock_config():
-    """Create a mock configuration with sensors"""
-    config = Mock(spec=ConfigurationGenerator)
-    config.config = [
-        Car(
-            name="test_car",
-            active=True,
-            theme="test-theme",
-            sensors={
-                "channel0": Sensor(
-                    name="voltage",
-                    unit="volts",
-                    conversion_factor=0.1,
-                    input_type="digital",
-                ),
-                "channel1": Sensor(
-                    name="current",
-                    unit="amps",
-                    conversion_factor=0.01,
-                    input_type="digital",
-                ),
-                "channel2": Sensor(
-                    name="button1", unit="", conversion_factor=1.0, input_type="digital"
-                ),
-                "channel3": Sensor(
-                    name="button2", unit="", conversion_factor=1.0, input_type="digital"
-                ),
-                "channel4": Sensor(
-                    name="switch", unit="", conversion_factor=1.0, input_type="digital"
-                ),
-                "channelA0": Sensor(
-                    name="analog_sensor",
-                    unit="units",
-                    conversion_factor=0.5,
-                    input_type="analog",
-                ),
-            },
-            metadata=Metadata(weight=200, power_plant="electric"),
-        )
-    ]
-    return config
+    """Create a sensor mapping used by DataReader"""
+    return {
+        "channel0": Sensor(
+            name="voltage",
+            unit="volts",
+            conversion_factor=0.1,
+            input_type="digital",
+        ),
+        "channel1": Sensor(
+            name="current",
+            unit="amps",
+            conversion_factor=0.01,
+            input_type="digital",
+        ),
+        "channel2": Sensor(
+            name="button1", unit="", conversion_factor=1.0, input_type="digital"
+        ),
+        "channel3": Sensor(
+            name="button2", unit="", conversion_factor=1.0, input_type="digital"
+        ),
+        "channel4": Sensor(
+            name="switch", unit="", conversion_factor=1.0, input_type="digital"
+        ),
+        "channelA0": Sensor(
+            name="analog_sensor",
+            unit="units",
+            conversion_factor=0.5,
+            input_type="analog",
+        ),
+    }
 
 
 @pytest.fixture
@@ -66,7 +56,7 @@ def sample_raw_data():
 def test_initialization(mock_config):
     """Test DataReader initialization"""
     reader = DataReader(mock_config)
-    assert reader._config == mock_config
+    assert reader._sensors == mock_config
     assert reader._distance_traveled == 0
     assert reader._last_update == 0
     assert reader._packet_size == struct.calcsize("<ffffBBBBBH")
@@ -109,12 +99,8 @@ def test_parse_sensor_data_empty_bytes(data_reader):
 
 
 def test_parse_sensor_data_no_active_car(sample_raw_data):
-    """Test reading data when no car is active"""
-    config = Mock(spec=ConfigurationGenerator)
-    config.config = [
-        Car(name="inactive", active=False, theme="", sensors={}, metadata=Metadata())
-    ]
-    reader = DataReader(config)
+    """Test reading data with no configured dynamic sensors"""
+    reader = DataReader({})
 
     result = reader.parse_sensor_data(sample_raw_data)
 
@@ -126,21 +112,13 @@ def test_parse_sensor_data_no_active_car(sample_raw_data):
 
 def test_parse_sensor_data_unknown_channel():
     """Test that unknown sensor channels are ignored"""
-    config = Mock(spec=ConfigurationGenerator)
-    config.config = [
-        Car(
-            name="test",
-            active=True,
-            theme="",
-            sensors={
-                "unknown_channel": Sensor(
-                    name="unknown", unit="", conversion_factor=1.0, input_type="digital"
-                )
-            },
-            metadata=Metadata(),
-        )
-    ]
-    reader = DataReader(config)
+    reader = DataReader(
+        {
+            "unknown_channel": Sensor(
+                name="unknown", unit="", conversion_factor=1.0, input_type="digital"
+            )
+        }
+    )
     raw_data = struct.pack("<ffffBBBBBH", 10.0, 10.0, 10.0, 10.0, 0, 0, 0, 0, 0, 0)
 
     result = reader.parse_sensor_data(raw_data)
@@ -246,24 +224,16 @@ def test_edge_cases(data_reader):
 
 def test_conversion_factor_zero():
     """Test that zero conversion factor defaults to 1.0"""
-    config = Mock(spec=ConfigurationGenerator)
-    config.config = [
-        Car(
-            name="test",
-            active=True,
-            theme="",
-            sensors={
-                "channel0": Sensor(
-                    name="zero_factor",
-                    unit="",
-                    conversion_factor=0.0,
-                    input_type="digital",
-                )
-            },
-            metadata=Metadata(),
-        )
-    ]
-    reader = DataReader(config)
+    reader = DataReader(
+        {
+            "channel0": Sensor(
+                name="zero_factor",
+                unit="",
+                conversion_factor=0.0,
+                input_type="digital",
+            )
+        }
+    )
     raw_data = struct.pack("<ffffBBBBBH", 10.0, 10.0, 10.0, 10.0, 1, 0, 0, 0, 0, 0)
 
     result = reader.parse_sensor_data(raw_data)

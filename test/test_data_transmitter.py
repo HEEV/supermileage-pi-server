@@ -1,3 +1,5 @@
+import csv
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import freezegun
@@ -31,14 +33,15 @@ class TestLocalTransmitter:
     def test_initialization_creates_file(self, loc_transmitter, tmp_path):
         expected_file = tmp_path / "2024-01-01_12-00-00_car_data.csv"
         assert expected_file.exists()
-        assert loc_transmitter._data_file_name == str(expected_file)
+        assert Path(loc_transmitter._data_file_name) == expected_file
 
     def test_handle_record_success(self, loc_transmitter):
         loc_transmitter.handle_record(DATA_RECORD)
         with open(loc_transmitter._data_file_name) as f:
-            lines = f.readlines()
-        assert len(lines) == 2
-        assert "30.0,5.0,80.0,70.0,1,12.5,100.0,10.0" in lines[1]
+            rows = [row for row in csv.reader(f) if row]
+
+        assert len(rows) == 2
+        assert rows[1] == ["30.0", "5.0", "80.0", "70.0", "1", "12.5", "100.0", "10.0"]
 
     def test_handle_record_errors(self, loc_transmitter):
         with patch("builtins.open", side_effect=OSError("Disk full")):
@@ -56,18 +59,13 @@ class TestRemoteTransmitter:
         return RemoteTransmitter(config_gen=mock_config_generator)
 
     def test_initialization(self, remote_transmitter):
+        remote_transmitter._client.connect_async.assert_called_once()
+        remote_transmitter._client.loop_start.assert_called_once()
         assert remote_transmitter is not None
 
     def test_initialization_missing_env_vars(self, mock_config_generator, monkeypatch):
         monkeypatch.delenv("MQTT_HOST", raising=False)
         with pytest.raises(TransmitterError, match="not set in environment variables"):
-            RemoteTransmitter(config_gen=mock_config_generator)
-
-    def test_initialization_connection_refused(
-        self, default_env, mock_config_generator, mock_mqtt_client
-    ):
-        mock_mqtt_client.return_value.connect.side_effect = ConnectionRefusedError
-        with pytest.raises(TransmitterError, match="Could not connect to MQTT broker"):
             RemoteTransmitter(config_gen=mock_config_generator)
 
     def test_handle_record_publishes_data(self, remote_transmitter):
