@@ -6,6 +6,7 @@ from os import getenv
 import paho.mqtt.client as mqtt
 
 from configuration_generator import ConfigurationGenerator, Sensor
+from sim_data_handler import Simulation_Handler
 
 
 class TransmitterError(Exception):
@@ -88,7 +89,7 @@ class RemoteTransmitter(DataTransmitter):
     A transmitter to send data over MQTT to the cloud server.
     """
 
-    def __init__(self, config_gen: ConfigurationGenerator = None):
+    def __init__(self, config_gen: ConfigurationGenerator = None, sim_handler: Simulation_Handler = None):
         self._broker_address = getenv("MQTT_HOST", None)
         self._port = getenv("MQTT_PORT", None)
         self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
@@ -96,7 +97,7 @@ class RemoteTransmitter(DataTransmitter):
         self._sim_topic = getenv("MQTT_SIMULATION_TOPIC", None)
         self._username = getenv("MQTT_USERNAME", None)
         self._password = getenv("MQTT_PASSWORD", None)
-        self._sim_data = None
+        self._sim_handler = sim_handler
         self._config_gen = config_gen
         if (
             not self._broker_address
@@ -163,7 +164,7 @@ class RemoteTransmitter(DataTransmitter):
         try:
             if msg.topic == self._sim_topic:
                 message = msg.payload.decode()
-                self._config_gen.read_sim_data(message)
+                self._sim_handler.set_sim_data(message)
             elif msg.topic == self._subscribe_topic:
                 message = msg.payload.decode()
                 self._config_gen.update_config(

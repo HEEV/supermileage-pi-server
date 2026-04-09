@@ -8,6 +8,7 @@ from aiohttp import web
 from dotenv import load_dotenv
 
 from configuration_generator import ConfigurationGenerator
+from sim_data_handler import Simulation_Handler
 from data_reader import DataReader
 from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
 from sm_serial import SmSerial, SmSerialError
@@ -32,7 +33,8 @@ async def main():
 
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
-    data_reader = DataReader(config_gen)
+    sim_handler = Simulation_Handler()
+    data_reader = DataReader(config_gen, sim_handler)
 
     # Create CSV for this session
     car_cache = (
@@ -89,13 +91,13 @@ async def main():
                 ser.close()
                 break
             try:
-                sim_data = data_reader.parse_sim_data("simulation_msg.json")
+                sim_data = sim_handler.get_sim_data()
                 if not DISABLE_DISPLAY:
                     await localDisplaySio.emit("new_sim_data", sim_data)
                     # TODO: Create way to identify which car we are using
                 await asyncio.sleep(0.05)
             except TransmitterError as exc:
-                print(f"Error transmitting data either locally or remotely: {exc}")
+                print(f"Error transmitting simulation data locally: {exc}")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()
