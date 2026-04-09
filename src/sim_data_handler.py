@@ -11,4 +11,6 @@ class Simulation_Handler:
         self.sim_data = new_sim_data
 
     def get_sim_data(self):
-        return self.sim_data
+        new_sim_data = {}
+        new_sim_data["current_lap"] = self.sim_data
+        return new_sim_data
