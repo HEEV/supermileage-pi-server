@@ -36,14 +36,14 @@ async def main():
     config_gen = ConfigurationGenerator()
     sensors = config_gen.get_sensors(CAR_SELECTION)
     sim_handler = Simulation_Handler()
-    data_reader = DataReader(sensors, sim_handler)
+    data_reader = DataReader(sensors)
 
     # Create CSV for this session
     car_cache = (
         LocalTransmitter(sensors) if not DISABLE_LOCAL else None
     )
     car_remote = (
-        RemoteTransmitter(config_gen=config_gen) if not DISABLE_REMOTE else None
+        RemoteTransmitter(config_gen=config_gen, sim_handler=sim_handler) if not DISABLE_REMOTE else None
     )
 
     # port='COM6' #for testing on Windows only
