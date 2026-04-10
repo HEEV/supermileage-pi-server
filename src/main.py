@@ -67,11 +67,13 @@ async def main():
 
                 # parse the arduino data, send data to local (sio) and remote (cursor)
                 data = data_reader.parse_sensor_data(last_line)
+                sim_data = sim_handler.get_sim_data()
                 print(data)
                 if data:
                     # Broadcast to connected clients
                     if not DISABLE_DISPLAY:
                         await localDisplaySio.emit("new_data", data)
+                        await localDisplaySio.emit("new_sim_data", sim_data)
                         # TODO: Create way to identify which car we are using
                     await asyncio.sleep(0.05)
 
@@ -87,18 +89,6 @@ async def main():
                 print(exc)
             except TransmitterError as exc:
                 print(f"Error transmitting data either locally or remotely: {exc}")
-            except KeyboardInterrupt:
-                print("Keyboard Interrupt, closing connections")
-                ser.close()
-                break
-            try:
-                sim_data = sim_handler.get_sim_data()
-                if not DISABLE_DISPLAY:
-                    await localDisplaySio.emit("new_sim_data", sim_data)
-                    # TODO: Create way to identify which car we are using
-                await asyncio.sleep(0.05)
-            except TransmitterError as exc:
-                print(f"Error transmitting simulation data locally: {exc}")
             except KeyboardInterrupt:
                 print("Keyboard Interrupt, closing connections")
                 ser.close()
