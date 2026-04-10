@@ -8,9 +8,9 @@ from aiohttp import web
 from dotenv import load_dotenv
 
 from configuration_generator import ConfigurationGenerator
-from sim_data_handler import Simulation_Handler
 from data_reader import DataReader
 from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
+from sim_data_handler import Simulation_Handler
 from sm_serial import SmSerial, SmSerialError
 from utils import get_env_flags
 
