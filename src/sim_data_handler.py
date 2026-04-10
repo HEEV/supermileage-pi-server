@@ -3,7 +3,7 @@
 Processes simulation data from the mqtt connection.
 
 """
-class Simulation_Handler:
+class SimulationHandler:
     def __init__(self, new_sim_data: list[dict] = None):
         self.sim_data = new_sim_data
 

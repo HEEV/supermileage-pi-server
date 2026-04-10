@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from configuration_generator import ConfigurationGenerator
 from data_reader import DataReader
 from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
-from sim_data_handler import Simulation_Handler
+from sim_data_handler import SimulationHandler
 from sm_serial import SmSerial, SmSerialError
 from utils import get_env_flags
 
@@ -35,7 +35,7 @@ async def main():
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
     sensors = config_gen.get_sensors(CAR_SELECTION)
-    sim_handler = Simulation_Handler()
+    sim_handler = SimulationHandler()
     data_reader = DataReader(sensors)
 
     # Create CSV for this session
