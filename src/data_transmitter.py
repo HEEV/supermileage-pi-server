@@ -6,7 +6,7 @@ from os import getenv
 import paho.mqtt.client as mqtt
 
 from configuration_generator import ConfigurationGenerator, Sensor
-from sim_data_handler import Simulation_Handler
+from sim_data_handler import SimulationHandler
 
 
 class TransmitterError(Exception):
@@ -88,7 +88,7 @@ class RemoteTransmitter(DataTransmitter):
     A transmitter to send data over MQTT to the cloud server.
     """
 
-    def __init__(self, config_gen: ConfigurationGenerator = None, sim_handler: Simulation_Handler = None):
+    def __init__(self, config_gen: ConfigurationGenerator = None, sim_handler: SimulationHandler = None):
         self._broker_address = getenv("MQTT_HOST", None)
         self._port = getenv("MQTT_PORT", None)
         self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
