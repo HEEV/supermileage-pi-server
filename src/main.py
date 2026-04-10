@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from configuration_generator import ConfigurationGenerator
 from data_reader import DataReader
 from data_transmitter import LocalTransmitter, RemoteTransmitter, TransmitterError
+from sim_data_handler import SimulationHandler
 from sm_serial import SmSerial, SmSerialError
 from utils import get_env_flags
 
@@ -34,6 +35,7 @@ async def main():
     # Automatically generate configuration from a JSON file defined in the environment.
     config_gen = ConfigurationGenerator()
     sensors = config_gen.get_sensors(CAR_SELECTION)
+    sim_handler = SimulationHandler()
     data_reader = DataReader(sensors)
 
     # Create CSV for this session
@@ -41,7 +43,7 @@ async def main():
         LocalTransmitter(sensors) if not DISABLE_LOCAL else None
     )
     car_remote = (
-        RemoteTransmitter(config_gen=config_gen) if not DISABLE_REMOTE else None
+        RemoteTransmitter(config_gen=config_gen, sim_handler=sim_handler) if not DISABLE_REMOTE else None
     )
 
     # port='COM6' #for testing on Windows only
@@ -65,11 +67,13 @@ async def main():
 
                 # parse the arduino data, send data to local (sio) and remote (cursor)
                 data = data_reader.parse_sensor_data(last_line)
+                sim_data = sim_handler.get_sim_data()
                 print(data)
                 if data:
                     # Broadcast to connected clients
                     if not DISABLE_DISPLAY:
                         await localDisplaySio.emit("new_data", data)
+                        await localDisplaySio.emit("new_sim_data", sim_data)
                         # TODO: Create way to identify which car we are using
                     await asyncio.sleep(0.05)
 

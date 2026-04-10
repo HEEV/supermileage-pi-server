@@ -15,6 +15,7 @@ This project is designed to run on a Raspberry Pi and uses the `uv` package mana
 | MQTT_PORT            | the port for the MQTT Broker                                                   | 9001                                         |
 | MQTT_PUBLISH_TOPIC   | the topic to publish data packets to                                           | cars/car_a/data                              |
 | MQTT_SUBSCRIBE_TOPIC | the topic to receive messages from, primarily for config                       | cars/car_a/config                            |
+| MQTT_SIMULATION_TOPIC | the topic to receive messages regarding the simulation from,                  | cars/car_a/sim                            |
 | MQTT_USERNAME        | the username credential of the computer for the MQTT Broker                    | car_a                                        |
 | MQTT_PASSWORD        | the password credential of the computer for the MQTT Broker                    | password1                                    |
 | CONFIG_FILE_PATH     | path to the sensor channel configuration file                                  | path/to/config.json                          |
