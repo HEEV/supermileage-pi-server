@@ -88,7 +88,11 @@ class RemoteTransmitter(DataTransmitter):
     A transmitter to send data over MQTT to the cloud server.
     """
 
-    def __init__(self, config_gen: ConfigurationGenerator = None, sim_handler: SimulationHandler = None):
+    def __init__(
+        self,
+        config_gen: ConfigurationGenerator = None,
+        sim_handler: SimulationHandler = None,
+    ):
         self._broker_address = getenv("MQTT_HOST", None)
         self._port = getenv("MQTT_PORT", None)
         self._publish_topic = getenv("MQTT_PUBLISH_TOPIC", None)
