@@ -79,6 +79,8 @@ ruff check
 
 These commands will ensure that your code does not have any regressions in functionality and still meets general formatting guidelines.
 
+To test the full functionality of the service locally on your machine, see [TESTING_README.md](/local_development/TESTING_README.md).
+
 ### Contribution Guidelines
 
 To build the dependencies needed for this repository, run the following command:

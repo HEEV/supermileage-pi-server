@@ -1,5 +1,19 @@
 # Changelog
 
+## Spring 2026
+
+### Added
+
+- Created Github Actions workflow to validate unit tests and code formatting ([#23](https://github.com/HEEV/supermileage-pi-server/pull/23)) (ZGeek03)
+- Created DataTransmitter class structure to handle different types of data transmission ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
+- Added function docstrings to all classes ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
+- Added MQTT functionality, including local testing environment ([#26](https://github.com/HEEV/supermileage-pi-server/pull/26)) (ZGeek03)
+- Added simluation message handling through SimulationHandler class ([#27](https://github.com/HEEV/supermileage-pi-server/pull/27)) (NathanielCavallaro)
+
+### Changed
+
+- Refactored codebase to pull functionality out of main.py, making it more testable ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
+
 ## Fall 2025
 
 ### Fixed
@@ -17,17 +31,3 @@
 ### Changed
 
 - Standardized the python project file structure ([#21](https://github.com/HEEV/supermileage-pi-server/pull/21)) (ZGeek03)
-
-## Spring 2026
-
-### Added
-
-- Created Github Actions workflow to validate unit tests and code formatting ([#23](https://github.com/HEEV/supermileage-pi-server/pull/23)) (ZGeek03)
-- Created DataTransmitter class structure to handle different types of data transmission ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
-- Added function docstrings to all classes ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
-- Added MQTT functionality, including local testing environment ([#26](https://github.com/HEEV/supermileage-pi-server/pull/26)) (ZGeek03)
-- Added simluation message handling through SimulationHandler class ([#27](https://github.com/HEEV/supermileage-pi-server/pull/27)) (NathanielCavallaro)
-
-### Changed
-
-- Refactored codebase to pull functionality out of main.py, making it more testable ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
