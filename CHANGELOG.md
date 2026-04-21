@@ -8,7 +8,7 @@
 - Created DataTransmitter class structure to handle different types of data transmission ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
 - Added function docstrings to all classes ([#24](https://github.com/HEEV/supermileage-pi-server/pull/24)) (ZGeek03)
 - Added MQTT functionality, including local testing environment ([#26](https://github.com/HEEV/supermileage-pi-server/pull/26)) (ZGeek03)
-- Added simluation message handling through SimulationHandler class ([#27](https://github.com/HEEV/supermileage-pi-server/pull/27)) (NathanielCavallaro)
+- Added simulation message handling through SimulationHandler class ([#27](https://github.com/HEEV/supermileage-pi-server/pull/27)) (NathanielCavallaro)
 
 ### Changed
 
