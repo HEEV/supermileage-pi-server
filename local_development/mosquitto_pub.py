@@ -28,6 +28,7 @@ client.publish(
     getenv("MQTT_SUBSCRIBE_TOPIC", "cars/sting/data"),
     getenv("TEST_MQTT_MESSAGE", "Test message"),
     qos=0,
+    retain=True,
 )  # Publish a test message
 
 client.disconnect()

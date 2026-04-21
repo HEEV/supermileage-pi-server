@@ -39,11 +39,11 @@ async def main():
     data_reader = DataReader(sensors)
 
     # Create CSV for this session
-    car_cache = (
-        LocalTransmitter(sensors) if not DISABLE_LOCAL else None
-    )
+    car_cache = LocalTransmitter(sensors) if not DISABLE_LOCAL else None
     car_remote = (
-        RemoteTransmitter(config_gen=config_gen, sim_handler=sim_handler) if not DISABLE_REMOTE else None
+        RemoteTransmitter(config_gen=config_gen, sim_handler=sim_handler)
+        if not DISABLE_REMOTE
+        else None
     )
 
     # port='COM6' #for testing on Windows only
